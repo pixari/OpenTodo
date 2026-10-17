@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { configVariables, loadFacts, readText } from './common.mjs'
 import { APP, check, checkApp, checkUpstream, FILES } from './truenas.mjs'
-import { parseYaml } from './truenas-yaml.mjs'
+import { parseYaml } from './yaml.mjs'
 
 const facts = loadFacts()
 const ctx = { facts, configVars: configVariables(), changelog: readText('CHANGELOG.md') }

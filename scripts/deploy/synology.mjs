@@ -9,10 +9,10 @@
 // 1026:100 for the first account DSM creates), because shared folders belong to DSM users and
 // not to the image's 65532; pull_policy: always, so Project -> Action -> Build pulls the moved
 // stable tag (Container Manager shows no update notice for ghcr.io images). The YAML is parsed
-// strictly by the repository's subset parser (truenas-yaml.mjs).
+// strictly by the repository's subset parser (yaml.mjs).
 
-import { checkShared, readText, ROOT } from './common.mjs'
-import { parseYaml } from './truenas-yaml.mjs'
+import { checkShared, isMap, readText, ROOT } from './common.mjs'
+import { parseYaml } from './yaml.mjs'
 
 export const TEMPLATE = 'deploy/synology/docker-compose.yml'
 export const DOCS = 'docs/self-hosting/synology.md'
@@ -22,7 +22,6 @@ export const PROJECT_PATH = '/volume1/docker/opentodo'
 const SERVICE_KEYS = ['image', 'container_name', 'pull_policy', 'user', 'restart', 'ports', 'environment', 'volumes', 'healthcheck']
 const HEALTH_KEYS = ['test', 'interval', 'timeout', 'retries', 'start_period']
 
-const isMap = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
 export function checkTemplate(text, ctx) {

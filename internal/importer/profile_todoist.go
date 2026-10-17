@@ -96,29 +96,7 @@ func (todoistProfile) Read(rd io.Reader, opts Options) (*Parsed, error) {
 	loc := opts.Location()
 	ref := opts.exportedAt.In(loc)
 
-	// The project comes from the file name inside a backup ("Work [2203306141].csv").
-	projectName, projectID := "", ""
-	if opts.entryName != "" {
-		base := path.Base(opts.entryName)
-		if m := todoistFileName.FindStringSubmatch(base); m != nil {
-			projectName, projectID = strings.TrimSpace(m[1]), m[2]
-		} else {
-			projectName = strings.TrimSuffix(base, path.Ext(base))
-		}
-	}
-	projectSource := ""
-	switch {
-	case projectName == "":
-		out.Notes = append(out.Notes, "A single Todoist CSV does not name its project: its tasks go to the target project. Upload the backup ZIP to keep project names.")
-	case strings.EqualFold(projectName, "Inbox"):
-		// Todoist's Inbox maps onto ours (or the chosen target project).
-	default:
-		if projectID == "" {
-			projectID = projectName
-		}
-		projectSource = "todoist:project:" + projectID
-		out.Rows = append(out.Rows, Row{Line: 1, Kind: KindProject, SourceID: projectSource, Title: projectName})
-	}
+	projectID, projectSource := todoistProject(opts, out)
 
 	var stack []string // source ids of the open parents by indent level
 	section := ""
@@ -198,56 +176,7 @@ func (todoistProfile) Read(rd io.Reader, opts Options) (*Parsed, error) {
 			if indent > 1 {
 				row.ParentSourceID = stack[indent-2]
 			}
-			if p := get("PRIORITY"); p != "" {
-				n, err := strconv.Atoi(p)
-				if err != nil || n < 1 || n > 4 {
-					row.fail("invalid priority %q (expected 1-4)", p)
-				} else {
-					// The CSV uses the numbers the app shows (1 is the red flag), unlike
-					// Todoist's API, where 4 is the highest (json-items reverses it).
-					row.Priority = n
-				}
-			}
-			if text := get("DATE"); text != "" {
-				due, rule, err := todoistDate(text, get("DATE_LANG"), ref)
-				switch {
-				case err != nil:
-					row.warn("date %q not understood; imported without a due date", text)
-				case rule != "":
-					row.Recurrence = rule
-				default:
-					row.Due = due
-				}
-			}
-			// The deadline column uses the same date language as DATE (deadlines D9).
-			if text := get("DEADLINE"); text != "" {
-				lang := get("DEADLINE_LANG")
-				if lang == "" {
-					lang = get("DATE_LANG")
-				}
-				due, rule, err := todoistDate(text, lang, ref)
-				if err != nil || rule != "" || due == nil {
-					row.Description = strings.TrimSpace(row.Description + "\n\nDeadline: " + text)
-					row.warn("deadline %q not understood; kept in the description", text)
-				} else {
-					row.Deadline = due.Date
-				}
-			}
-			if n, err := strconv.Atoi(get("DURATION")); err == nil && n > 0 {
-				switch strings.ToLower(get("DURATION_UNIT")) {
-				case "minute", "minutes", "":
-					row.EstimateMinutes = n
-				case "day", "days":
-					row.warn("duration of %d days dropped (estimates are in minutes)", n)
-				}
-			}
-			rowLoc := loc
-			if tz := get("TIMEZONE"); tz != "" {
-				if z, err := time.LoadLocation(tz); err == nil {
-					rowLoc = z
-				}
-			}
-			todoistReminder(&row, get, ref, rowLoc)
+			todoistTaskFields(&row, get, ref, loc)
 			if get("RESPONSIBLE") != "" {
 				row.warn("assignee dropped (only your own account can be assigned by an import)")
 			}
@@ -266,6 +195,90 @@ func (todoistProfile) Read(rd io.Reader, opts Options) (*Parsed, error) {
 		}
 	}
 	return out, nil
+}
+
+// todoistProject reads the project from the file name inside a backup
+// ("Work [2203306141].csv") and adds its row; the source id is empty for a
+// single CSV and for the Inbox.
+func todoistProject(opts Options, out *Parsed) (projectID, projectSource string) {
+	projectName := ""
+	if opts.entryName != "" {
+		base := path.Base(opts.entryName)
+		if m := todoistFileName.FindStringSubmatch(base); m != nil {
+			projectName, projectID = strings.TrimSpace(m[1]), m[2]
+		} else {
+			projectName = strings.TrimSuffix(base, path.Ext(base))
+		}
+	}
+	switch {
+	case projectName == "":
+		out.Notes = append(out.Notes, "A single Todoist CSV does not name its project: its tasks go to the target project. Upload the backup ZIP to keep project names.")
+	case strings.EqualFold(projectName, "Inbox"):
+		// Todoist's Inbox maps onto ours (or the chosen target project).
+	default:
+		if projectID == "" {
+			projectID = projectName
+		}
+		projectSource = "todoist:project:" + projectID
+		out.Rows = append(out.Rows, Row{Line: 1, Kind: KindProject, SourceID: projectSource, Title: projectName})
+	}
+	return projectID, projectSource
+}
+
+// todoistTaskFields reads a task row's priority, due date or rule, deadline,
+// duration and reminder; loc is the import's zone, which the row's TIMEZONE
+// overrides for its reminder.
+func todoistTaskFields(row *Row, get func(string) string, ref time.Time, loc *time.Location) {
+	if p := get("PRIORITY"); p != "" {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 1 || n > 4 {
+			row.fail("invalid priority %q (expected 1-4)", p)
+		} else {
+			// The CSV uses the numbers the app shows (1 is the red flag), unlike
+			// Todoist's API, where 4 is the highest (json-items reverses it).
+			row.Priority = n
+		}
+	}
+	if text := get("DATE"); text != "" {
+		due, rule, err := todoistDate(text, get("DATE_LANG"), ref)
+		switch {
+		case err != nil:
+			row.warn("date %q not understood; imported without a due date", text)
+		case rule != "":
+			row.Recurrence = rule
+		default:
+			row.Due = due
+		}
+	}
+	// The deadline column uses the same date language as DATE (deadlines D9).
+	if text := get("DEADLINE"); text != "" {
+		lang := get("DEADLINE_LANG")
+		if lang == "" {
+			lang = get("DATE_LANG")
+		}
+		due, rule, err := todoistDate(text, lang, ref)
+		if err != nil || rule != "" || due == nil {
+			row.Description = strings.TrimSpace(row.Description + "\n\nDeadline: " + text)
+			row.warn("deadline %q not understood; kept in the description", text)
+		} else {
+			row.Deadline = due.Date
+		}
+	}
+	if n, err := strconv.Atoi(get("DURATION")); err == nil && n > 0 {
+		switch strings.ToLower(get("DURATION_UNIT")) {
+		case "minute", "minutes", "":
+			row.EstimateMinutes = n
+		case "day", "days":
+			row.warn("duration of %d days dropped (estimates are in minutes)", n)
+		}
+	}
+	rowLoc := loc
+	if tz := get("TIMEZONE"); tz != "" {
+		if z, err := time.LoadLocation(tz); err == nil {
+			rowLoc = z
+		}
+	}
+	todoistReminder(row, get, ref, rowLoc)
 }
 
 // todoistReminder reads REMINDER_TYPE / REMINDER_OFFSET (minutes before the due

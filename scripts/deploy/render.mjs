@@ -6,10 +6,10 @@
 // (https://render.com/docs/blueprint-spec, https://render.com/schema/render.yaml.json) define for
 // a web service; anything else is refused, and so is a field the schema knows but this template
 // must not use (a Git build, scaling, which a disk forbids, or the free plan, which has no disks).
-// The YAML is parsed strictly by the repository's subset parser (truenas-yaml.mjs).
+// The YAML is parsed strictly by the repository's subset parser (yaml.mjs).
 
-import { checkShared, readText, ROOT } from './common.mjs'
-import { parseYaml } from './truenas-yaml.mjs'
+import { checkShared, isMap, readText, ROOT } from './common.mjs'
+import { parseYaml } from './yaml.mjs'
 
 export const BLUEPRINT = 'deploy/render/render.yaml'
 export const DOCS = 'docs/self-hosting/render.md'
@@ -36,7 +36,6 @@ const SERVICE_NAME = 'opentodo'
 const KEY_VALUE_FIELDS = ['key', 'value', 'generateValue', 'sync', 'previewValue']
 const FROM_SERVICE_FIELDS = ['name', 'type', 'property', 'envVarKey']
 
-const isMap = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 
 export function checkBlueprint(text, ctx) {
   if (text === null) return [`${BLUEPRINT} is missing`]

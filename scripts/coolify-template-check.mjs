@@ -11,17 +11,17 @@
 // container_name/restart, the stable image tag (deploy/deploy.json), SERVICE_URL_OPENTODO_8080 and
 // OPENTODO_BASE_URL from SERVICE_URL_OPENTODO, every OPENTODO_* optional and read by internal/config, the /data
 // volume, the `/opentodo healthcheck` health check, the logo, and identical upstream copies
-// (deploy/coolify/upstream/). No dependencies: the template is parsed by a strict parser for the YAML subset it uses.
+// (deploy/coolify/upstream/). No dependencies: the template is parsed by the shared strict YAML subset parser (scripts/deploy/yaml.mjs).
 
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkImage, configVariables, latestRelease, loadFacts } from './deploy/common.mjs'
+import { checkImage, configVariables, latestRelease, loadFacts, readText as read, ROOT } from './deploy/common.mjs'
+import { parseYaml as parseSubset, splitComment, YAML_COMPOSE } from './deploy/yaml.mjs'
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const PATHS = {
   template: 'deploy/coolify/opentodo.yaml',
   logo: 'deploy/coolify/opentodo.svg',
@@ -37,94 +37,11 @@ const PORT = '8080'
 // Coolify's PR quality check (.github/workflows/pr-quality.yaml, max-added-comments) closes PRs adding more.
 const MAX_COMMENT_LINES = 10
 
-// ---- strict YAML subset parser ----------------------------------------------------------------------------
+// ---- strict YAML subset (scripts/deploy/yaml.mjs, profile YAML_COMPOSE) ---------------------------------
 
-/** Removes a trailing ` # comment` outside quotes; returns [text, comment|null]. */
-export function splitComment(line) {
-  let quote = null
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i]
-    if (quote) {
-      if (c === quote) quote = null
-    } else if (c === '"' || c === "'") {
-      quote = c
-    } else if (c === '#' && (i === 0 || /\s/.test(line[i - 1]))) {
-      return [line.slice(0, i).trimEnd(), line.slice(i + 1).trim()]
-    }
-  }
-  return [line, null]
-}
-
-function scalar(raw, lineNo) {
-  const v = raw.trim()
-  if (v.startsWith('[')) {
-    try {
-      return JSON.parse(v)
-    } catch {
-      throw new Error(`line ${lineNo}: flow sequences must be JSON arrays with double quotes: ${v}`)
-    }
-  }
-  if (/^["']/.test(v)) {
-    const q = v[0]
-    if (!v.endsWith(q) || v.length < 2) throw new Error(`line ${lineNo}: unterminated quote: ${v}`)
-    return v.slice(1, -1)
-  }
-  if (/^[|>&*!{]/.test(v)) throw new Error(`line ${lineNo}: unsupported YAML syntax: ${v}`)
-  return v
-}
-
-/** Parses the YAML subset of Coolify templates: block maps, block sequences of scalars, JSON flow arrays. */
-export function parseYaml(text) {
-  const lines = []
-  text.split('\n').forEach((raw, i) => {
-    if (raw.includes('\t')) throw new Error(`line ${i + 1}: tabs are not allowed`)
-    const [content] = splitComment(raw)
-    if (content.trim() === '') return
-    lines.push({ indent: content.length - content.trimStart().length, text: content.trim(), no: i + 1 })
-  })
-  let pos = 0
-  function block(indent) {
-    const first = lines[pos]
-    if (first.text.startsWith('- ') || first.text === '-') {
-      const seq = []
-      while (pos < lines.length && lines[pos].indent === indent && lines[pos].text.startsWith('-')) {
-        const item = lines[pos].text.slice(1).trim()
-        if (/^[A-Za-z_][\w.-]*:(\s|$)/.test(item) && !item.includes('=')) {
-          throw new Error(`line ${lines[pos].no}: maps inside sequences are not supported`)
-        }
-        seq.push(scalar(item, lines[pos].no))
-        pos++
-      }
-      return seq
-    }
-    const map = {}
-    while (pos < lines.length && lines[pos].indent === indent) {
-      const { text: t, no } = lines[pos]
-      const m = /^([A-Za-z0-9_.-]+):(?:\s+(.*))?$/.exec(t)
-      if (!m) throw new Error(`line ${no}: expected "key:" or "key: value", got: ${t}`)
-      if (Object.hasOwn(map, m[1])) throw new Error(`line ${no}: duplicate key ${m[1]}`)
-      pos++
-      if (m[2] !== undefined && m[2] !== '') {
-        map[m[1]] = scalar(m[2], no)
-      } else if (pos < lines.length && lines[pos].indent > indent) {
-        map[m[1]] = block(lines[pos].indent)
-      } else if (pos < lines.length && lines[pos].indent === indent && lines[pos].text.startsWith('-')) {
-        map[m[1]] = block(indent) // "key:" followed by a sequence at the same indent
-      } else {
-        map[m[1]] = null
-      }
-    }
-    if (pos < lines.length && lines[pos].indent > indent) {
-      throw new Error(`line ${lines[pos].no}: unexpected indentation`)
-    }
-    return map
-  }
-  if (lines.length === 0) return {}
-  if (lines[0].indent !== 0) throw new Error(`line ${lines[0].no}: document must start at column 0`)
-  const doc = block(0)
-  if (pos !== lines.length) throw new Error(`line ${lines[pos].no}: could not parse`)
-  return doc
-}
+/** Parses the YAML subset of Coolify templates: string scalars, no maps inside sequences, no block scalars. */
+export const parseYaml = (text) => parseSubset(text, YAML_COMPOSE)
+export { splitComment }
 
 /** The `# key: value` header lines, in order (the same regex as Coolify's Generate\Services). */
 export function parseHeader(text) {
@@ -141,11 +58,6 @@ export function parseHeader(text) {
 /** The newest released version in CHANGELOG.md (`## [X.Y.Z] - date`). */
 // Shared with every platform template (scripts/deploy/common.mjs, OpenSpec change unraid-template).
 export { configVariables, latestRelease }
-
-function read(rel, root = ROOT) {
-  const p = join(root, rel)
-  return existsSync(p) ? readFileSync(p, 'utf8') : null
-}
 
 export function loadInputs(root = ROOT) {
   return {

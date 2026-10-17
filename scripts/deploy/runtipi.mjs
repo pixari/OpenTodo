@@ -5,10 +5,10 @@
 // metadata/. Policy 'release': Runtipi offers an update when config.json changes, so the image
 // names the release (Renovate in the store repository bumps it, see deploy/runtipi/README.md).
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { parseYaml } from '../coolify-template-check.mjs'
-import { checkShared, latestRelease, readText, ROOT } from './common.mjs'
+import { checkShared, latestRelease, listFiles, readText, ROOT } from './common.mjs'
+import { parseYaml as parseSubset, YAML_COMPOSE } from './yaml.mjs'
 
 export const DIR = 'deploy/runtipi'
 export const UPSTREAM = 'deploy/runtipi/upstream'
@@ -77,7 +77,7 @@ export function checkCompose(text, ctx, fields = new Map()) {
   if (!text.endsWith('\n')) errors.push('docker-compose.yml must end with a newline')
   let doc
   try {
-    doc = parseYaml(text)
+    doc = parseSubset(text, YAML_COMPOSE)
   } catch (e) {
     return { errors: [...errors, `docker-compose.yml is not in the supported YAML subset: ${e.message}`] }
   }
@@ -144,20 +144,13 @@ export function jpegSize(buf) {
   return null
 }
 
-function files(dir) {
-  return readdirSync(dir).flatMap((n) => {
-    const p = join(dir, n)
-    return statSync(p).isDirectory() ? files(p) : [p]
-  })
-}
-
 /** The store repository: its own files, and identical copies of the app. */
 export function checkUpstream(root = ROOT, compose = null) {
   const errors = []
   const up = join(root, UPSTREAM)
   if (!existsSync(up)) return [`${UPSTREAM}/ is missing`]
   const want = [...STORE_FILES, ...APP_FILES.map((f) => `apps/${ID}/${f}`)].sort()
-  const have = files(up).map((f) => relative(up, f)).filter((f) => !f.startsWith('node_modules/')).sort()
+  const have = listFiles(up).map((f) => relative(up, f)).filter((f) => !f.startsWith('node_modules/')).sort()
   for (const f of want) if (!have.includes(f)) errors.push(`${UPSTREAM}/${f} is missing`)
   for (const f of have) if (!want.includes(f)) errors.push(`${UPSTREAM}/${f} is not part of the store`)
   for (const f of APP_FILES) {

@@ -9,8 +9,8 @@
 
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseYaml } from '../coolify-template-check.mjs'
 import { checkShared, readText, ROOT } from './common.mjs'
+import { parseYaml as parseSubset, YAML_COMPOSE } from './yaml.mjs'
 
 export const ID = 'opentodo'
 const DIR = `deploy/dokploy/blueprints/${ID}`
@@ -112,7 +112,7 @@ export function checkCompose(text, facts) {
   const errors = []
   let doc
   try {
-    doc = parseYaml(text)
+    doc = parseSubset(text, YAML_COMPOSE)
   } catch (e) {
     return { errors: [`${PATHS.compose} is not in the supported YAML subset: ${e.message}`] }
   }

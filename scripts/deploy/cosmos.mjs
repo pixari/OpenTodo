@@ -10,8 +10,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { checkShared, readText, ROOT } from './common.mjs'
-import { pngSize } from './casaos.mjs'
+import { checkShared, isMap, pngSize, readText, ROOT, same } from './common.mjs'
 
 export const DESCRIPTION = 'deploy/cosmos/description.json'
 export const COMPOSE = 'deploy/cosmos/cosmos-compose.json'
@@ -24,8 +23,6 @@ const DESCRIPTION_KEYS = ['description', 'image', 'longDescription', 'name', 're
 const SERVICE_KEYS = ['container_name', 'environment', 'image', 'labels', 'restart', 'routes', 'volumes']
 const UPSTREAM_FILES = ['cosmos-compose.json', 'description.json', 'icon.png', 'screenshots']
 
-const isMap = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 const parse = (text, label) => {
   try { return [JSON.parse(text), null] } catch (e) { return [null, `${label} is not valid JSON: ${e.message}`] }
 }

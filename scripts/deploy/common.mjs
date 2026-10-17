@@ -3,7 +3,7 @@
 // own format and passes what it found to checkShared(); the facts every template
 // must agree on are in deploy/deploy.json.
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -12,6 +12,23 @@ export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 export function readText(rel, root = ROOT) {
   const p = join(root, rel)
   return existsSync(p) ? readFileSync(p, 'utf8') : null
+}
+
+/** Every file under `dir`, recursively, as absolute paths. */
+export function listFiles(dir) {
+  return readdirSync(dir).flatMap((n) => {
+    const p = join(dir, n)
+    return statSync(p).isDirectory() ? listFiles(p) : [p]
+  })
+}
+
+export const isMap = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
+export const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+
+/** Width and height of a PNG file, or null when it is not one. */
+export function pngSize(buf) {
+  if (!buf || buf.length < 24 || buf.toString('latin1', 1, 4) !== 'PNG' || buf.toString('latin1', 12, 16) !== 'IHDR') return null
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
 }
 
 export function loadFacts(root = ROOT) {

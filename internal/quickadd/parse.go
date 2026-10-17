@@ -57,194 +57,231 @@ func newCtx(ctx Context) *dateCtx {
 
 // Parse reads a quick-add line. Pure: the result depends only on the line and ctx.
 func Parse(line string, ctx Context) Result {
-	dctx := newCtx(ctx)
-	bareHourIsTime := false
-	for _, v := range dctx.vocabs {
-		bareHourIsTime = bareHourIsTime || v.HourSuffixH
+	p := &parser{line: line, ctx: ctx, dctx: newCtx(ctx)}
+	for _, v := range p.dctx.vocabs {
+		p.bareHourIsTime = p.bareHourIsTime || v.HourSuffixH
 	}
-	tokens, quotes := tokenize(line)
+	var quotes []Span
+	p.tokens, quotes = tokenize(line)
+	for i := 0; i < len(p.tokens); {
+		i = p.step(i)
+	}
+	return p.result(quotes)
+}
 
-	type str struct {
-		value string
-		span  Span
-		set   bool
-	}
-	var date, deadline, project, rec str
-	var timeV struct {
+// found is one recognised value and the span of the line it came from.
+type found struct {
+	value string
+	span  Span
+	set   bool
+}
+
+// parser is the state of one Parse call: the tokens and what was recognised.
+type parser struct {
+	line           string
+	ctx            Context
+	dctx           *dateCtx
+	bareHourIsTime bool
+	tokens         []token
+
+	date, deadline, project, rec found
+	timeV                        struct {
 		value, date string
 		span        Span
 		set         bool
 	}
-	var priority, estimate struct {
+	priority, estimate struct {
 		value int
 		span  Span
 	}
-	var evening, someday *Span
-	var labels []str
-	var reminders []struct {
+	evening, someday *Span
+	labels           []found
+	reminders        []struct {
 		value Reminder
 		span  Span
 	}
+}
 
-	i := 0
-	for i < len(tokens) {
-		t := tokens[i]
-		if t.quoted {
-			i++
-			continue
-		}
-		one := spanOf(line, tokens, i, i+1)
-		if !project.set && len(t.text) > 1 && t.text[0] == '#' {
-			if p := matchProject(t.text, ctx.Projects); p != nil {
-				project = str{p.ID, one, true}
-				i++
-				continue
-			}
-		}
-		if l, ok := matchLabel(t.text); ok {
-			labels = append(labels, str{l, one, true})
-			i++
-			continue
-		}
-		if priority.value == 0 {
-			if p := matchPriority(t.text); p > 0 {
-				priority.value, priority.span = p, one
-				i++
-				continue
-			}
-		}
-		if estimate.value == 0 {
-			if m := matchDuration(t.text, bareHourIsTime); m > 0 {
-				estimate.value, estimate.span = m, one
-				i++
-				continue
-			}
-		}
-		if !deadline.set {
-			if dl := matchDeadlineAt(tokens, i, dctx); dl != nil {
-				deadline = str{dl.date, spanOf(line, tokens, dl.from, dl.to), true}
-				i = dl.to
-				if tm := matchTimeAt(tokens, dl.to, dctx); tm != nil {
-					i = tm.to
-				}
-				continue
-			}
-		}
-		if evening == nil {
-			if n := wordsAt(tokens, i, dctx, func(v *Vocab) []string { return v.EveningWords }); n > 0 {
-				s := spanOf(line, tokens, i, i+n)
-				evening = &s
-				if !date.set {
-					date = str{ctx.Today, s, true}
-				}
-				i += n
-				continue
-			}
-		}
-		var dm *dateMatch
-		var tm *timeMatch
-		var rm *recMatch
-		if !date.set {
-			dm = matchDateAt(tokens, i, dctx)
-		}
-		if !timeV.set {
-			tm = matchTimeAt(tokens, i, dctx)
-		}
-		if !rec.set {
-			rm = matchRecurrenceAt(tokens, i, dctx)
-		}
-		mm := matchReminderAt(tokens, i, dctx)
-		end := func(to int, ok bool) int {
-			if ok {
-				return to
-			}
-			return 0
-		}
-		phraseEnd := max(end(rmTo(rm)), end(mmTo(mm)))
-		if phraseEnd > max(end(dmTo(dm)), end(tmTo(tm))) {
-			if rm != nil && rm.to == phraseEnd {
-				rec = str{rm.rule, spanOf(line, tokens, rm.from, rm.to), true}
-				i = rm.to
-			} else if mm != nil {
-				reminders = append(reminders, struct {
-					value Reminder
-					span  Span
-				}{mm.reminder, spanOf(line, tokens, mm.from, mm.to)})
-				i = mm.to
-			}
-		} else if dm != nil && (tm == nil || dm.to >= tm.to) {
-			date = str{dm.date, spanOf(line, tokens, dm.from, dm.to), true}
-			i = dm.to
-		} else if tm != nil {
-			timeV.value, timeV.date, timeV.span, timeV.set = tm.time, tm.date, spanOf(line, tokens, tm.from, tm.to), true
-			i = tm.to
-		} else {
-			n := 0
-			if someday == nil {
-				n = wordsAt(tokens, i, dctx, func(v *Vocab) []string { return v.SomedayWords })
-			}
-			if n > 0 {
-				s := spanOf(line, tokens, i, i+n)
-				someday = &s
-				i += n
-			} else {
-				i++
-			}
+func (p *parser) span(from, to int) Span { return spanOf(p.line, p.tokens, from, to) }
+
+// step reads what starts at token i and returns the index of the next token
+// to read.
+func (p *parser) step(i int) int {
+	if p.tokens[i].quoted {
+		return i + 1
+	}
+	if next, ok := p.attribute(i); ok {
+		return next
+	}
+	return p.phrase(i)
+}
+
+// attribute matches the single-token attributes (project, label, priority,
+// estimate), a deadline and the evening words at token i.
+func (p *parser) attribute(i int) (int, bool) {
+	t, tokens, dctx := p.tokens[i], p.tokens, p.dctx
+	one := p.span(i, i+1)
+	if !p.project.set && len(t.text) > 1 && t.text[0] == '#' {
+		if pr := matchProject(t.text, p.ctx.Projects); pr != nil {
+			p.project = found{pr.ID, one, true}
+			return i + 1, true
 		}
 	}
-	parked := someday != nil && !date.set && !timeV.set && !deadline.set && !rec.set
-
-	var due *Due
-	if date.set || timeV.set || rec.set {
-		d := date.value
-		if !date.set {
-			switch {
-			case rec.set:
-				r, _ := recurrence.Parse(rec.value)
-				d, _ = r.First(ctx.Today)
-			case timeV.date != "":
-				d = timeV.date
-			default:
-				d = ctx.Today
-			}
-		}
-		due = &Due{Date: d}
-		if timeV.set {
-			due.Time = timeV.value
+	if l, ok := matchLabel(t.text); ok {
+		p.labels = append(p.labels, found{l, one, true})
+		return i + 1, true
+	}
+	if p.priority.value == 0 {
+		if pr := matchPriority(t.text); pr > 0 {
+			p.priority.value, p.priority.span = pr, one
+			return i + 1, true
 		}
 	}
+	if p.estimate.value == 0 {
+		if m := matchDuration(t.text, p.bareHourIsTime); m > 0 {
+			p.estimate.value, p.estimate.span = m, one
+			return i + 1, true
+		}
+	}
+	if !p.deadline.set {
+		if dl := matchDeadlineAt(tokens, i, dctx); dl != nil {
+			p.deadline = found{dl.date, p.span(dl.from, dl.to), true}
+			next := dl.to
+			if tm := matchTimeAt(tokens, dl.to, dctx); tm != nil {
+				next = tm.to
+			}
+			return next, true
+		}
+	}
+	if p.evening == nil {
+		if n := wordsAt(tokens, i, dctx, func(v *Vocab) []string { return v.EveningWords }); n > 0 {
+			s := p.span(i, i+n)
+			p.evening = &s
+			if !p.date.set {
+				p.date = found{p.ctx.Today, s, true}
+			}
+			return i + n, true
+		}
+	}
+	return 0, false
+}
 
+// phrase matches the longest of a date, a time, a recurrence or a reminder at
+// token i, then the someday words; an unrecognised token stays in the title.
+func (p *parser) phrase(i int) int {
+	tokens, dctx := p.tokens, p.dctx
+	var dm *dateMatch
+	var tm *timeMatch
+	var rm *recMatch
+	if !p.date.set {
+		dm = matchDateAt(tokens, i, dctx)
+	}
+	if !p.timeV.set {
+		tm = matchTimeAt(tokens, i, dctx)
+	}
+	if !p.rec.set {
+		rm = matchRecurrenceAt(tokens, i, dctx)
+	}
+	mm := matchReminderAt(tokens, i, dctx)
+	end := func(to int, ok bool) int {
+		if ok {
+			return to
+		}
+		return 0
+	}
+	phraseEnd := max(end(rmTo(rm)), end(mmTo(mm)))
+	switch {
+	case phraseEnd > max(end(dmTo(dm)), end(tmTo(tm))):
+		if rm != nil && rm.to == phraseEnd {
+			p.rec = found{rm.rule, p.span(rm.from, rm.to), true}
+			return rm.to
+		} else if mm != nil {
+			p.reminders = append(p.reminders, struct {
+				value Reminder
+				span  Span
+			}{mm.reminder, p.span(mm.from, mm.to)})
+			return mm.to
+		}
+		return i
+	case dm != nil && (tm == nil || dm.to >= tm.to):
+		p.date = found{dm.date, p.span(dm.from, dm.to), true}
+		return dm.to
+	case tm != nil:
+		p.timeV.value, p.timeV.date, p.timeV.span, p.timeV.set = tm.time, tm.date, p.span(tm.from, tm.to), true
+		return tm.to
+	}
+	n := 0
+	if p.someday == nil {
+		n = wordsAt(tokens, i, dctx, func(v *Vocab) []string { return v.SomedayWords })
+	}
+	if n > 0 {
+		s := p.span(i, i+n)
+		p.someday = &s
+		return i + n
+	}
+	return i + 1
+}
+
+// due is the due date the line sets: its date, or the recurrence's first
+// date, the time's own date or today when only those were given.
+func (p *parser) due() *Due {
+	if !p.date.set && !p.timeV.set && !p.rec.set {
+		return nil
+	}
+	d := p.date.value
+	if !p.date.set {
+		switch {
+		case p.rec.set:
+			r, _ := recurrence.Parse(p.rec.value)
+			d, _ = r.First(p.ctx.Today)
+		case p.timeV.date != "":
+			d = p.timeV.date
+		default:
+			d = p.ctx.Today
+		}
+	}
+	due := &Due{Date: d}
+	if p.timeV.set {
+		due.Time = p.timeV.value
+	}
+	return due
+}
+
+// result builds the Result and the title: the line without the recognised
+// spans (quoted text always stays).
+func (p *parser) result(quotes []Span) Result {
+	parked := p.someday != nil && !p.date.set && !p.timeV.set && !p.deadline.set && !p.rec.set
 	var remove []Span
 	add := func(s Span, ok bool) {
 		if ok {
 			remove = append(remove, s)
 		}
 	}
-	add(date.span, date.set)
-	add(timeV.span, timeV.set)
-	if evening != nil {
-		remove = append(remove, *evening)
+	add(p.date.span, p.date.set)
+	add(p.timeV.span, p.timeV.set)
+	if p.evening != nil {
+		remove = append(remove, *p.evening)
 	}
 	if parked {
-		remove = append(remove, *someday)
+		remove = append(remove, *p.someday)
 	}
-	add(deadline.span, deadline.set)
-	add(project.span, project.set)
-	add(rec.span, rec.set)
-	add(priority.span, priority.value > 0)
-	add(estimate.span, estimate.value > 0)
-	out := Result{Due: due, Deadline: deadline.value, Someday: parked, Evening: evening != nil, ProjectID: project.value,
-		Priority: priority.value, EstimateMinutes: estimate.value, Recurrence: rec.value, Labels: []string{}, Reminders: []Reminder{}}
-	for _, l := range labels {
+	add(p.deadline.span, p.deadline.set)
+	add(p.project.span, p.project.set)
+	add(p.rec.span, p.rec.set)
+	add(p.priority.span, p.priority.value > 0)
+	add(p.estimate.span, p.estimate.value > 0)
+	out := Result{Due: p.due(), Deadline: p.deadline.value, Someday: parked, Evening: p.evening != nil, ProjectID: p.project.value,
+		Priority: p.priority.value, EstimateMinutes: p.estimate.value, Recurrence: p.rec.value, Labels: []string{}, Reminders: []Reminder{}}
+	for _, l := range p.labels {
 		remove = append(remove, l.span)
 		out.Labels = append(out.Labels, l.value)
 	}
-	for _, r := range reminders {
+	for _, r := range p.reminders {
 		remove = append(remove, r.span)
 		out.Reminders = append(out.Reminders, r.value)
 	}
 	sort.Slice(remove, func(a, b int) bool { return remove[a].Start < remove[b].Start })
-	out.Title = stripSpans(line, remove, quotes)
+	out.Title = stripSpans(p.line, remove, quotes)
 	return out
 }
 

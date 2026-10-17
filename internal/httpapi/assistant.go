@@ -538,41 +538,8 @@ func (s *Server) handleAssistantTurn(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "consent_required", "read which data is sent to "+assistant.ProviderLabel(route.Provider)+" and accept before the first message")
 		return
 	}
-	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, turnMaxBody))
-	if err != nil {
-		var tooBig *http.MaxBytesError
-		if errors.As(err, &tooBig) {
-			writeError(w, http.StatusRequestEntityTooLarge, "too_large", "a turn is at most 256 KB; start a new conversation or clear older messages")
-			return
-		}
-		writeError(w, http.StatusBadRequest, "bad_request", "could not read the request body")
-		return
-	}
-	var in turnRequest
-	if err := json.Unmarshal(raw, &in); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_input", "invalid JSON body")
-		return
-	}
-	if len(in.Messages) > turnMaxMessages {
-		writeError(w, http.StatusRequestEntityTooLarge, "too_large", fmt.Sprintf("a turn carries at most %d messages", turnMaxMessages))
-		return
-	}
-	if msg := validateTurn(in); msg != "" {
-		writeError(w, http.StatusBadRequest, "invalid_input", msg)
-		return
-	}
-	var skill *agenttools.Skill
-	if in.Skill != "" {
-		sk, ok := agenttools.SkillByID(in.Skill)
-		if !ok {
-			writeError(w, http.StatusBadRequest, "unknown_skill", "there is no skill with this id")
-			return
-		}
-		skill = &sk
-	}
-	zone, err := agenttools.ParseZone(in.Timezone, "timezone")
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_input", "timezone: must be an IANA time zone such as Europe/Rome")
+	in, skill, zone, ok := readTurn(w, r)
+	if !ok {
 		return
 	}
 	usage, err := s.assistant.Store.Usage(ctx, u.ID, set.MonthlyTokenCap)
@@ -684,6 +651,49 @@ func (s *Server) handleAssistantTurn(w http.ResponseWriter, r *http.Request) {
 		done["message"] = res.Message
 	}
 	send("done", done)
+}
+
+// readTurn reads and checks a turn request: its size, its messages, the
+// skill and the time zone. It answers the error itself and reports false then.
+func readTurn(w http.ResponseWriter, r *http.Request) (turnRequest, *agenttools.Skill, *time.Location, bool) {
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, turnMaxBody))
+	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			writeError(w, http.StatusRequestEntityTooLarge, "too_large", "a turn is at most 256 KB; start a new conversation or clear older messages")
+			return turnRequest{}, nil, nil, false
+		}
+		writeError(w, http.StatusBadRequest, "bad_request", "could not read the request body")
+		return turnRequest{}, nil, nil, false
+	}
+	var in turnRequest
+	if err := json.Unmarshal(raw, &in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid JSON body")
+		return turnRequest{}, nil, nil, false
+	}
+	if len(in.Messages) > turnMaxMessages {
+		writeError(w, http.StatusRequestEntityTooLarge, "too_large", fmt.Sprintf("a turn carries at most %d messages", turnMaxMessages))
+		return turnRequest{}, nil, nil, false
+	}
+	if msg := validateTurn(in); msg != "" {
+		writeError(w, http.StatusBadRequest, "invalid_input", msg)
+		return turnRequest{}, nil, nil, false
+	}
+	var skill *agenttools.Skill
+	if in.Skill != "" {
+		sk, ok := agenttools.SkillByID(in.Skill)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "unknown_skill", "there is no skill with this id")
+			return turnRequest{}, nil, nil, false
+		}
+		skill = &sk
+	}
+	zone, err := agenttools.ParseZone(in.Timezone, "timezone")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "timezone: must be an IANA time zone such as Europe/Rome")
+		return turnRequest{}, nil, nil, false
+	}
+	return in, skill, zone, true
 }
 
 func validateTurn(in turnRequest) string {

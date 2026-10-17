@@ -13,12 +13,9 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/pixari/opentodo/internal/e2ee"
-	"github.com/pixari/opentodo/internal/recurrence"
-	"github.com/pixari/opentodo/internal/zoned"
 )
 
 // Op is one field assignment.
@@ -562,201 +559,14 @@ func checkAttachment(field string, raw json.RawMessage) error {
 	return nil
 }
 
+// checkKind checks an op value against its field's kind; the per-kind checks
+// are in kinds.go. A kind without a check accepts any value.
 func checkKind(k kind, raw json.RawMessage) error {
-	isNull := string(raw) == "null"
-	switch k {
-	case kString:
-		var s string
-		if err := json.Unmarshal(raw, &s); err != nil || !utf8.ValidString(s) {
-			return errors.New("must be a string")
-		}
-	case kNullableString:
-		if isNull {
-			return nil
-		}
-		var s string
-		if err := json.Unmarshal(raw, &s); err != nil || len(s) > MaxIDLen {
-			return errors.New("must be null or an id string")
-		}
-	case kNumber:
-		var f float64
-		if err := json.Unmarshal(raw, &f); err != nil {
-			return errors.New("must be a number")
-		}
-	case kNullableNumber:
-		if isNull {
-			return nil
-		}
-		var f float64
-		if err := json.Unmarshal(raw, &f); err != nil {
-			return errors.New("must be null or a number")
-		}
-	case kBool:
-		// json.Unmarshal leaves a bool untouched on null, so null is refused
-		// explicitly (OpenSpec change habits: a non-boolean flag is invalid).
-		var b bool
-		if err := json.Unmarshal(raw, &b); err != nil || isNull {
-			return errors.New("must be a boolean")
-		}
-	case kPriority:
-		var p int
-		if err := json.Unmarshal(raw, &p); err != nil || p < 1 || p > 4 {
-			return errors.New("must be an integer from 1 (highest) to 4 (lowest)")
-		}
-	case kStart:
-		if isNull {
-			return nil
-		}
-		var d string
-		if err := json.Unmarshal(raw, &d); err != nil || (d != "someday" && !isDate(d)) {
-			return errors.New(`must be null, "someday" or a date "YYYY-MM-DD"`)
-		}
-		if d != "someday" {
-			if _, err := time.Parse("2006-01-02", d); err != nil {
-				return errors.New(`must be null, "someday" or a date "YYYY-MM-DD" that exists`)
-			}
-		}
-	case kDate:
-		if isNull {
-			return nil
-		}
-		var d string
-		if err := json.Unmarshal(raw, &d); err != nil || !isDate(d) {
-			return errors.New(`must be null or a date "YYYY-MM-DD"`)
-		}
-		if _, err := time.Parse("2006-01-02", d); err != nil {
-			return errors.New(`must be null or a date "YYYY-MM-DD" that exists`)
-		}
-	case kDue:
-		if isNull {
-			return nil
-		}
-		var d struct {
-			Date string  `json:"date"`
-			Time *string `json:"time"`
-			TZ   *string `json:"tz"`
-		}
-		if err := json.Unmarshal(raw, &d); err != nil || !isDate(d.Date) || (d.Time != nil && !isClock(*d.Time)) {
-			return errors.New(`must be null or {"date":"YYYY-MM-DD","time":"HH:MM"?,"tz":"Area/City"?}`)
-		}
-		// The date must exist and the time be a clock reading 00:00-23:59
-		// (sync-convergence): recurrence and reminders compute from them.
-		if _, err := time.Parse("2006-01-02", d.Date); err != nil {
-			return errors.New(`must be null or a due whose date "YYYY-MM-DD" exists`)
-		}
-		if d.Time != nil {
-			if _, err := time.Parse("15:04", *d.Time); err != nil {
-				return errors.New(`must be null or a due whose time "HH:MM" is between 00:00 and 23:59`)
-			}
-		}
-		// A zoned due (OpenSpec change absolute-datetimes) names a known IANA
-		// zone and always has a time.
-		if d.TZ != nil {
-			if d.Time == nil {
-				return errors.New("tz requires time")
-			}
-			if !zoned.Valid(*d.TZ) {
-				return fmt.Errorf("tz must be a known IANA time zone of at most %d characters", zoned.MaxZoneLen)
-			}
-		}
-	case kStringList:
-		var l []string
-		if err := json.Unmarshal(raw, &l); err != nil || l == nil {
-			return errors.New("must be an array of strings")
-		}
-	case kIDList:
-		var l []string
-		if err := json.Unmarshal(raw, &l); err != nil || l == nil {
-			return errors.New("must be an array of task ids")
-		}
-		if len(l) > MaxBlockedBy {
-			return fmt.Errorf("may hold at most %d ids", MaxBlockedBy)
-		}
-		seen := make(map[string]bool, len(l))
-		for _, id := range l {
-			if id == "" || len(id) > MaxIDLen {
-				return fmt.Errorf("ids must be 1 to %d characters", MaxIDLen)
-			}
-			if seen[id] {
-				return fmt.Errorf("lists %q twice", id)
-			}
-			seen[id] = true
-		}
-	case kPositiveInt:
-		if isNull {
-			return nil
-		}
-		// Unmarshalling into an integer rejects fractions, exponents and strings.
-		var n int64
-		if err := json.Unmarshal(raw, &n); err != nil || n < 1 || n > MaxPositiveInt {
-			return fmt.Errorf("must be null or an integer from 1 to %d", MaxPositiveInt)
-		}
-	case kRecurrence:
-		if isNull {
-			return nil
-		}
-		var s string
-		if err := json.Unmarshal(raw, &s); err != nil {
-			return errors.New("must be null or a recurrence rule string")
-		}
-		if _, err := recurrence.Parse(s); err != nil {
-			return err
-		}
-	case kID:
-		var s string
-		if err := json.Unmarshal(raw, &s); err != nil || s == "" || len(s) > MaxIDLen {
-			return errors.New("must be an id string")
-		}
-	case kReminderKind:
-		var s string
-		if err := json.Unmarshal(raw, &s); err != nil || (s != "relative" && s != "absolute" && s != "deadline") {
-			return errors.New(`must be "relative", "absolute" or "deadline"`)
-		}
-	case kOffsetMinutes:
-		if isNull {
-			return nil
-		}
-		var n int64
-		if err := json.Unmarshal(raw, &n); err != nil || n < -MaxReminderOffset || n > MaxReminderOffset {
-			return fmt.Errorf("must be null or an integer from -%d to %d", MaxReminderOffset, MaxReminderOffset)
-		}
-	case kNullableText:
-		if isNull {
-			return nil
-		}
-		var s string
-		if err := json.Unmarshal(raw, &s); err != nil || !utf8.ValidString(s) {
-			return errors.New("must be null or a string")
-		}
-	case kDoc:
-		var s string
-		if err := json.Unmarshal(raw, &s); isNull || err != nil || !ValidDoc(s) {
-			return fmt.Errorf(`must be "" or a document envelope "<format>:v<n>:<base64>" of at most %d characters`, MaxDocBytes)
-		}
-	case kFieldValue:
-		var v any
-		if err := json.Unmarshal(raw, &v); err != nil {
-			return errors.New("must be null, a string, a number or a boolean")
-		}
-		switch x := v.(type) {
-		case nil, bool, float64:
-		case string:
-			if !utf8.ValidString(x) {
-				return errors.New("must be valid text")
-			}
-		default:
-			return errors.New("must be null, a string, a number or a boolean")
-		}
-	case kInstant:
-		if isNull {
-			return nil
-		}
-		var f float64
-		if err := json.Unmarshal(raw, &f); err != nil || f <= 0 {
-			return errors.New("must be null or a positive unix millisecond timestamp")
-		}
+	check, ok := kindChecks[k]
+	if !ok {
+		return nil
 	}
-	return nil
+	return check(raw)
 }
 
 func isDate(s string) bool {

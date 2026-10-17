@@ -10,10 +10,10 @@
 //
 // Reads the public registry anonymously (ghcr.io token endpoint, then a HEAD on the manifest).
 
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { loadFacts, ROOT } from './common.mjs'
+import { listFiles, loadFacts, ROOT } from './common.mjs'
 
 const INDEX_TYPES = [
   'application/vnd.oci.image.index.v1+json',
@@ -36,19 +36,12 @@ export async function indexDigest(image, version, fetchImpl = fetch) {
   return digest
 }
 
-function files(dir) {
-  return readdirSync(dir).flatMap((n) => {
-    const p = join(dir, n)
-    return statSync(p).isDirectory() ? files(p) : [p]
-  })
-}
-
 /** Every `<image>:<x.y.z>@sha256:<hex>` reference in deploy/, with its file. */
 export function pinnedRefs(root = ROOT, image = loadFacts(root).image) {
   const esc = image.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
   const re = new RegExp(`${esc}:(\\d+\\.\\d+\\.\\d+)@(sha256:[0-9a-f]{64})`, 'g')
   const refs = []
-  for (const file of files(join(root, 'deploy'))) {
+  for (const file of listFiles(join(root, 'deploy'))) {
     const text = readFileSync(file, 'utf8')
     for (const m of text.matchAll(re)) refs.push({ file, version: m[1], digest: m[2], ref: m[0] })
   }

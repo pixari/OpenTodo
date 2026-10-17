@@ -11,7 +11,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { checkShared, readText, ROOT } from './common.mjs'
-import { parseYaml } from './truenas-yaml.mjs'
+import { parseYaml } from './yaml.mjs'
 
 export const NAME = 'opentodo'
 export const TEMPLATE = 'deploy/caprover/opentodo.yml'

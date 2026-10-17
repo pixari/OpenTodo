@@ -11,6 +11,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"time"
 )
 
 // csvProfile reads a CSV file with the documented columns (docs/import.md). Only
@@ -156,116 +157,123 @@ func (csvProfile) Read(rd io.Reader, opts Options) (*Parsed, error) {
 		if allBlank(rec) {
 			continue
 		}
-		row := Row{Line: line, Kind: KindTask}
-		row.Title = get("title")
-		row.Description = get("description")
-		row.ProjectName = get("project")
-		row.SectionName = get("section")
-		row.ParentSourceID = get("parent")
-		for _, ref := range strings.FieldsFunc(get("blocked_by"), func(r rune) bool { return r == ';' || r == '|' || r == ',' }) {
-			if ref = strings.TrimSpace(ref); ref != "" {
-				row.BlockedBySourceIDs = append(row.BlockedBySourceIDs, ref)
-			}
-		}
-		if row.Title == "" {
-			row.fail("title is required")
-		}
-		if p, err := parsePriority(get("priority")); err != nil {
-			row.fail("%v", err)
-		} else {
-			row.Priority = p
-		}
-		due, err := parseDue(get("due_date"), loc)
-		if err != nil {
-			row.fail("%v", err)
-		}
-		if t := get("due_time"); t != "" {
-			switch clock, err := parseClock(t); {
-			case err != nil:
-				row.fail("%v", err)
-			case due == nil && get("due_date") == "":
-				row.fail("due_time requires due_date")
-			case due != nil:
-				due.Time = clock
-			}
-		}
-		row.Due = due
-		row.Labels = splitList(get("labels"))
-		if v := get("completed_at"); v != "" {
-			if truthy(v) {
-				row.Completed = true
-			} else if ts, err := parseTimestamp(v, loc); err != nil {
-				row.fail("completed_at: %v", err)
-			} else {
-				row.Completed, row.CompletedAt = true, ts
-			}
-		}
-		if v := get("completed"); v != "" && truthy(v) {
-			row.Completed = true
-		}
-		if v := get("recurrence"); v != "" {
-			setRecurrence(&row, v)
-		}
-		setDeadline(&row, get("deadline"), loc)
-		// Attachment references become link attachments (attachments D12).
-		for _, ref := range strings.FieldsFunc(get("attachment"), func(r rune) bool { return r == ';' || r == '|' || r == ',' || r == '\n' || r == ' ' }) {
-			row.addLink("", ref)
-		}
-		if v := get("start"); v != "" {
-			if strings.EqualFold(v, "someday") {
-				row.Start = "someday"
-			} else if d, err := parseDue(v, loc); err != nil || d == nil || d.Time != "" {
-				row.fail("invalid start %q (expected YYYY-MM-DD or someday)", v)
-			} else {
-				row.Start = d.Date
-			}
-		}
-		if v := get("evening"); v != "" {
-			row.Evening = truthy(v)
-		}
-		if v := get("reminder"); v != "" {
-			var list []any
-			for _, part := range strings.FieldsFunc(v, func(r rune) bool { return r == ';' || r == ',' || r == '|' }) {
-				if part = strings.TrimSpace(part); part != "" {
-					list = append(list, part)
-				}
-			}
-			addReminders(&row, list, loc)
-		}
-		if v := get("created_at"); v != "" {
-			if ts, err := parseTimestamp(v, loc); err != nil {
-				row.fail("created_at: %v", err)
-			} else {
-				row.CreatedAt = ts
-			}
-		}
-		idxs := make([]int, 0, len(unsupported))
-		for i := range unsupported {
-			idxs = append(idxs, i)
-		}
-		sort.Ints(idxs)
-		for _, i := range idxs {
-			if i < len(rec) && strings.TrimSpace(rec[i]) != "" {
-				row.warn("%s dropped (not supported)", unsupported[i])
-			}
-		}
-		// The source id lets a repeated import of the same file skip what it already
-		// created: the id column when present, otherwise a hash of the row's content.
-		if id := get("id"); id != "" {
-			row.SourceID = "id:" + id
-		} else {
-			key := strings.ToLower(strings.Join([]string{row.Title, row.ProjectName, row.SectionName, row.ParentSourceID, get("due_date"), get("due_time")}, "\x1f"))
-			sum := sha256.Sum256([]byte(key))
-			seen[key]++
-			row.SourceID = fmt.Sprintf("row:%s:%d", hex.EncodeToString(sum[:8]), seen[key])
-		}
-		out.Rows = append(out.Rows, row)
+		out.Rows = append(out.Rows, csvRow(line, rec, get, unsupported, seen, loc))
 		if len(out.Rows) > MaxRows {
 			return nil, ErrTooManyRows
 		}
 	}
 	resolveCSVParents(out.Rows)
 	return out, nil
+}
+
+// csvRow reads one record into a task row. unsupported names the columns
+// whose values are dropped with a warning; seen counts content keys, so rows
+// without an id column get stable source ids.
+func csvRow(line int, rec []string, get func(string) string, unsupported map[int]string, seen map[string]int, loc *time.Location) Row {
+	row := Row{Line: line, Kind: KindTask}
+	row.Title = get("title")
+	row.Description = get("description")
+	row.ProjectName = get("project")
+	row.SectionName = get("section")
+	row.ParentSourceID = get("parent")
+	for _, ref := range strings.FieldsFunc(get("blocked_by"), func(r rune) bool { return r == ';' || r == '|' || r == ',' }) {
+		if ref = strings.TrimSpace(ref); ref != "" {
+			row.BlockedBySourceIDs = append(row.BlockedBySourceIDs, ref)
+		}
+	}
+	if row.Title == "" {
+		row.fail("title is required")
+	}
+	if p, err := parsePriority(get("priority")); err != nil {
+		row.fail("%v", err)
+	} else {
+		row.Priority = p
+	}
+	due, err := parseDue(get("due_date"), loc)
+	if err != nil {
+		row.fail("%v", err)
+	}
+	if t := get("due_time"); t != "" {
+		switch clock, err := parseClock(t); {
+		case err != nil:
+			row.fail("%v", err)
+		case due == nil && get("due_date") == "":
+			row.fail("due_time requires due_date")
+		case due != nil:
+			due.Time = clock
+		}
+	}
+	row.Due = due
+	row.Labels = splitList(get("labels"))
+	if v := get("completed_at"); v != "" {
+		if truthy(v) {
+			row.Completed = true
+		} else if ts, err := parseTimestamp(v, loc); err != nil {
+			row.fail("completed_at: %v", err)
+		} else {
+			row.Completed, row.CompletedAt = true, ts
+		}
+	}
+	if v := get("completed"); v != "" && truthy(v) {
+		row.Completed = true
+	}
+	if v := get("recurrence"); v != "" {
+		setRecurrence(&row, v)
+	}
+	setDeadline(&row, get("deadline"), loc)
+	// Attachment references become link attachments (attachments D12).
+	for _, ref := range strings.FieldsFunc(get("attachment"), func(r rune) bool { return r == ';' || r == '|' || r == ',' || r == '\n' || r == ' ' }) {
+		row.addLink("", ref)
+	}
+	if v := get("start"); v != "" {
+		if strings.EqualFold(v, "someday") {
+			row.Start = "someday"
+		} else if d, err := parseDue(v, loc); err != nil || d == nil || d.Time != "" {
+			row.fail("invalid start %q (expected YYYY-MM-DD or someday)", v)
+		} else {
+			row.Start = d.Date
+		}
+	}
+	if v := get("evening"); v != "" {
+		row.Evening = truthy(v)
+	}
+	if v := get("reminder"); v != "" {
+		var list []any
+		for _, part := range strings.FieldsFunc(v, func(r rune) bool { return r == ';' || r == ',' || r == '|' }) {
+			if part = strings.TrimSpace(part); part != "" {
+				list = append(list, part)
+			}
+		}
+		addReminders(&row, list, loc)
+	}
+	if v := get("created_at"); v != "" {
+		if ts, err := parseTimestamp(v, loc); err != nil {
+			row.fail("created_at: %v", err)
+		} else {
+			row.CreatedAt = ts
+		}
+	}
+	idxs := make([]int, 0, len(unsupported))
+	for i := range unsupported {
+		idxs = append(idxs, i)
+	}
+	sort.Ints(idxs)
+	for _, i := range idxs {
+		if i < len(rec) && strings.TrimSpace(rec[i]) != "" {
+			row.warn("%s dropped (not supported)", unsupported[i])
+		}
+	}
+	// The source id lets a repeated import of the same file skip what it already
+	// created: the id column when present, otherwise a hash of the row's content.
+	if id := get("id"); id != "" {
+		row.SourceID = "id:" + id
+	} else {
+		key := strings.ToLower(strings.Join([]string{row.Title, row.ProjectName, row.SectionName, row.ParentSourceID, get("due_date"), get("due_time")}, "\x1f"))
+		sum := sha256.Sum256([]byte(key))
+		seen[key]++
+		row.SourceID = fmt.Sprintf("row:%s:%d", hex.EncodeToString(sum[:8]), seen[key])
+	}
+	return row
 }
 
 // resolveCSVParents maps the `parent` column onto source ids: the id of another

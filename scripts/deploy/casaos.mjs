@@ -5,13 +5,13 @@
 // and pins digests itself, and installs only update when x-casaos.version changes, so the
 // image names the latest release (policy 'release') and the version must equal its tag.
 //
-// The compose file is parsed with a strict YAML subset parser (parseYaml below): block
-// maps, block sequences (of scalars or maps), flow sequences of scalars, literal block
-// scalars and plain, single- or double-quoted scalars. Anything else is refused.
+// The compose file is parsed by the shared strict YAML subset parser (scripts/deploy/yaml.mjs)
+// with the YAML_CASAOS profile: typed scalars, literal block scalars only, dates quoted.
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { checkShared, readText, ROOT } from './common.mjs'
+import { checkShared, isMap, pngSize, readText, ROOT, same } from './common.mjs'
+import { parseYaml as parseSubset, YAML_CASAOS } from './yaml.mjs'
 
 export const TEMPLATE = 'deploy/casaos/docker-compose.yml'
 export const UPSTREAM_DIR = 'deploy/casaos/upstream/Apps/OpenTodo'
@@ -23,169 +23,13 @@ export const DATA_SOURCE = '/DATA/AppData/$AppID/data'
 export const UPSTREAM_FILES = ['docker-compose.yml', 'icon.png', 'icon.svg', 'screenshot-1.png', 'screenshot-2.png', 'thumbnail.png']
 export const CATEGORIES = ['Media', 'Productivity', 'Home', 'Networking', 'AI', 'Finance', 'Social', 'Developer', 'Others']
 
-// ---- strict YAML subset -------------------------------------------------------------
+// ---- strict YAML subset (scripts/deploy/yaml.mjs, profile YAML_CASAOS) -------------------
 
-function stripComment(s) {
-  let q = null
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i]
-    if (q) {
-      if (c === '\\' && q === '"') i++
-      else if (c === q) q = null
-    } else if (c === '"' || c === "'") {
-      if (i === 0 || /[\s[,:]/.test(s[i - 1])) q = c
-    } else if (c === '#' && (i === 0 || /\s/.test(s[i - 1]))) {
-      return s.slice(0, i).trimEnd()
-    }
-  }
-  if (q) throw new Error(`unterminated quote: ${s}`)
-  return s
-}
-
-function splitFlow(inner, no) {
-  const parts = []
-  let cur = ''
-  let q = null
-  for (let i = 0; i < inner.length; i++) {
-    const c = inner[i]
-    if (q) {
-      cur += c
-      if (c === '\\' && q === '"') { cur += inner[++i]; continue }
-      if (c === q) q = null
-    } else if (c === '"' || c === "'") { q = c; cur += c }
-    else if (c === ',') { parts.push(cur.trim()); cur = '' }
-    else if ('[]{}'.includes(c)) throw new Error(`line ${no}: nested flow collections are not supported`)
-    else cur += c
-  }
-  if (cur.trim() !== '' || parts.length) parts.push(cur.trim())
-  return parts
-}
-
-/** A scalar: quoted strings stay strings, plain ones resolve like YAML 1.2 core (bool, null, int, float). */
-export function scalar(s, no) {
-  if (s.startsWith('"')) {
-    if (!s.endsWith('"') || s.length < 2) throw new Error(`line ${no}: unterminated double-quoted string`)
-    try { return JSON.parse(s) } catch { throw new Error(`line ${no}: unsupported escape in ${s}`) }
-  }
-  if (s.startsWith("'")) {
-    if (!s.endsWith("'") || s.length < 2) throw new Error(`line ${no}: unterminated single-quoted string`)
-    const inner = s.slice(1, -1)
-    if (/'(?!')/.test(inner.replace(/''/g, ''))) throw new Error(`line ${no}: stray quote in ${s}`)
-    return inner.replace(/''/g, "'")
-  }
-  if (s.startsWith('[')) {
-    if (!s.endsWith(']')) throw new Error(`line ${no}: unterminated flow sequence`)
-    const inner = s.slice(1, -1).trim()
-    return inner === '' ? [] : splitFlow(inner, no).map((p) => {
-      if (p === '') throw new Error(`line ${no}: empty flow sequence item`)
-      return scalar(p, no)
-    })
-  }
-  if (s === '{}') return {}
-  if (/^[{&*!|>%@`]/.test(s)) throw new Error(`line ${no}: not in the supported YAML subset: ${s}`)
-  if (/:\s/.test(s) || s.endsWith(':')) throw new Error(`line ${no}: a plain scalar may not contain ": " (quote it): ${s}`)
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) throw new Error(`line ${no}: quote dates, other parsers read them as timestamps: ${s}`)
-  if (/^(true|false)$/.test(s)) return s === 'true'
-  if (/^(null|~)$/.test(s)) return null
-  if (/^[-+]?\d+$/.test(s)) return Number(s)
-  if (/^[-+]?(\d+\.\d*|\.\d+)([eE][-+]?\d+)?$/.test(s)) return Number(s)
-  return s
-}
-
-/** Parses the YAML subset; throws with a line number on anything else. */
-export function parseYaml(text) {
-  const raw = text.split('\n')
-  let i = 0
-  const KEY = /^([A-Za-z0-9_][A-Za-z0-9_.\-$/]*):(?:\s+(.*))?$/
-  function peek() {
-    while (i < raw.length && /^\s*(#.*)?$/.test(raw[i])) i++
-    if (i >= raw.length) return null
-    const line = raw[i]
-    if (line.includes('\t')) throw new Error(`line ${i + 1}: tabs are not allowed`)
-    const indent = line.length - line.trimStart().length
-    return { indent, text: stripComment(line.trim()), no: i + 1 }
-  }
-  function literal(parentIndent, chomp) {
-    const out = []
-    let blockIndent = null
-    while (i < raw.length) {
-      const line = raw[i]
-      if (line.trim() === '') { out.push(''); i++; continue }
-      const ind = line.length - line.trimStart().length
-      if (ind <= parentIndent) break
-      if (blockIndent === null) blockIndent = ind
-      if (ind < blockIndent) throw new Error(`line ${i + 1}: literal block is less indented than its first line`)
-      out.push(line.slice(blockIndent))
-      i++
-    }
-    while (out.length && out.at(-1) === '') out.pop()
-    if (!out.length) throw new Error(`line ${i}: empty literal block`)
-    return out.join('\n') + (chomp === '-' ? '' : '\n')
-  }
-  function block(indent) {
-    const first = peek()
-    return first.text === '-' || first.text.startsWith('- ') ? seq(indent) : map(indent)
-  }
-  function map(indent) {
-    const out = {}
-    for (let p = peek(); p && p.indent === indent; p = peek()) {
-      if (p.text === '-' || p.text.startsWith('- ')) break
-      const m = KEY.exec(p.text)
-      if (!m) throw new Error(`line ${p.no}: expected "key:" or "key: value", got: ${p.text}`)
-      if (Object.hasOwn(out, m[1])) throw new Error(`line ${p.no}: duplicate key ${m[1]}`)
-      i++
-      if (m[2] === '|' || m[2] === '|-') {
-        out[m[1]] = literal(indent, m[2].slice(1))
-      } else if (m[2] !== undefined && m[2] !== '') {
-        out[m[1]] = scalar(m[2], p.no)
-      } else {
-        const n = peek()
-        if (n && n.indent > indent) out[m[1]] = block(n.indent)
-        else if (n && n.indent === indent && (n.text === '-' || n.text.startsWith('- '))) out[m[1]] = seq(indent)
-        else out[m[1]] = null
-      }
-    }
-    const n = peek()
-    if (n && n.indent > indent) throw new Error(`line ${n.no}: unexpected indentation`)
-    return out
-  }
-  function seq(indent) {
-    const out = []
-    for (let p = peek(); p && p.indent === indent && (p.text === '-' || p.text.startsWith('- ')); p = peek()) {
-      const item = p.text.slice(1).trim()
-      if (item === '') throw new Error(`line ${p.no}: empty sequence items are not supported`)
-      if (KEY.test(item) && !/^["'[]/.test(item)) {
-        // "- key: value" starts a map whose keys sit two columns right of the dash.
-        raw[i] = raw[i].replace(/^(\s*)- /, '$1  ')
-        out.push(map(indent + 2))
-      } else {
-        out.push(scalar(item, p.no))
-        i++
-      }
-    }
-    const n = peek()
-    if (n && n.indent > indent) throw new Error(`line ${n.no}: unexpected indentation`)
-    return out
-  }
-  const first = peek()
-  if (!first) return {}
-  if (first.indent !== 0) throw new Error(`line ${first.no}: document must start at column 0`)
-  const doc = map(0)
-  const rest = peek()
-  if (rest) throw new Error(`line ${rest.no}: could not parse`)
-  return doc
-}
+export const parseYaml = (text) => parseSubset(text, YAML_CASAOS)
 
 // ---- checks ---------------------------------------------------------------------------
 
-const isMap = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
-
-/** Width and height of a PNG file, or null when it is not one. */
-export function pngSize(buf) {
-  if (!buf || buf.length < 24 || buf.toString('latin1', 1, 4) !== 'PNG' || buf.toString('latin1', 12, 16) !== 'IHDR') return null
-  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
-}
+export { pngSize }
 
 export function checkTemplate(text, ctx) {
   if (text === null) return [`${TEMPLATE} is missing`]

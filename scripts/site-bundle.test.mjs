@@ -102,6 +102,6 @@ test('server facts come from their sources (site-bundle-server-facts)', () => {
     writeFileSync(join(root, f), read(f))
   }
   mkdirSync(join(root, 'internal/httpapi'), { recursive: true })
-  writeFileSync(join(root, 'internal/httpapi/server.go'), 'package httpapi\n')
-  assert.throws(() => serverFacts(root), /internal\/httpapi\/server\.go/)
+  writeFileSync(join(root, 'internal/httpapi/export.go'), 'package httpapi\n')
+  assert.throws(() => serverFacts(root), /internal\/httpapi\/export\.go/)
 })

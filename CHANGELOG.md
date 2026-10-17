@@ -82,9 +82,12 @@ All notable changes to OpenTodo are documented here. The format follows [Keep a 
 
 ### Changed
 
+- **For contributors: the deploy template checks share one strict YAML parser** (`scripts/deploy/yaml.mjs`) instead of four that read some files differently, so a quoted `'it''s'` or a folded text means the same in every check. The committed templates are unchanged.
+- **For contributors: `AGENTS.md` and `docs/architecture.md` name every server package**, `AGENTS.md` describes the MCP server's write tools, and a repository check fails when a package or token scope is left out. The privacy list in the README now also names outgoing email and calendar subscriptions.
 - **OpenTodo is in Unraid's Community Applications.** Install it from the **Apps** tab: search for OpenTodo and click **Install**. Installing from the template URL by hand still works. ([Unraid](docs/self-hosting/unraid.md))
 - **A `stable` image tag, used by every template.** Each release now also publishes `ghcr.io/pixari/opentodo:stable` (release candidates never move it), and the Unraid and Coolify templates, `docker-compose.yml` and the README examples use it: every release, minor versions included, arrives through the platform's update button, with migrations applied on start. Installs on `:0.6` keep their tag and its fixes; switch to `stable` once to follow every release. A **Promote stable** workflow points `stable` at an earlier release to roll back. ([Docker](docs/self-hosting/docker.md), [Unraid](docs/self-hosting/unraid.md#updates-and-backups), [Coolify](docs/self-hosting/coolify.md))
 - **Choose the address `docker-compose.yml` publishes on** with the optional `OPENTODO_BIND` in `.env`. The default stays every interface, so existing installs reached from your network keep working; behind a reverse proxy on the same machine, `OPENTODO_BIND=127.0.0.1` is the safer choice. ([Docker](docs/self-hosting/docker.md))
+- **Contributors: the server code is easier to find your way in.** The HTTP server, the sync write path, quick add, the importer, CalDAV and the AI agent tools are split into smaller files and functions, with no change in behaviour. A test now fails when a function under `internal/` grows past 150 lines or a file past 1,100 lines.
 
 ### Fixed
 

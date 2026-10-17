@@ -157,8 +157,8 @@ export function serverFacts(root = repoRoot) {
     dataDir: factFrom(root, 'Dockerfile', /^VOLUME\s+\["([^"]+)"\]/m),
     database: factFrom(root, 'go.mod', /^\s*(?:require\s+)?(modernc\.org\/sqlite|github\.com\/mattn\/go-sqlite3)\s/m, () => 'SQLite'),
     license: factFrom(root, 'LICENSE', /GNU AFFERO GENERAL PUBLIC LICENSE\s+Version 3/, () => 'AGPL-3.0'),
-    exportFormat: factFrom(root, 'internal/httpapi/server.go', /"format": "(opentodo-export)", "version": \d+/),
-    exportFormatVersion: Number(factFrom(root, 'internal/httpapi/server.go', /"format": "opentodo-export", "version": (\d+)/)),
+    exportFormat: factFrom(root, 'internal/httpapi/export.go', /"format": "(opentodo-export)", "version": \d+/),
+    exportFormatVersion: Number(factFrom(root, 'internal/httpapi/export.go', /"format": "opentodo-export", "version": (\d+)/)),
   }
 }
 

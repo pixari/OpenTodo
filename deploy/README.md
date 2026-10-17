@@ -36,7 +36,7 @@ A folder without a checker fails the run. Tests: `node --test scripts/deploy/*.t
 
 1. Add the variable to `deploy.json` first if the platform should offer one that is not catalogued yet (the check refuses it otherwise).
 2. Create `deploy/<platform>/` with the template and a `README.md` (how to install before it is listed, how to submit it).
-3. Add `scripts/deploy/<platform>.mjs` exporting `check(ctx)` and `summary`. Parse the format strictly, check what is specific to the platform, and pass `{ image, port, dataTarget, variables, policy }` to `checkShared()`. `unraid.mjs` is a short example. Add tests in `scripts/deploy/<platform>.test.mjs`.
+3. Add `scripts/deploy/<platform>.mjs` exporting `check(ctx)` and `summary`. Parse the format strictly (YAML files go through the one shared parser, `scripts/deploy/yaml.mjs`: pick the profile that matches what the platform's file may use, or add one there with tests in `yaml.test.mjs`; never write another YAML parser), check what is specific to the platform, and pass `{ image, port, dataTarget, variables, policy }` to `checkShared()`. `unraid.mjs` is a short example. Add tests in `scripts/deploy/<platform>.test.mjs`.
 4. Add `docs/self-hosting/<platform>.md` and list it in `docs/README.md`, and add a row to the table above.
 
 ## On a release

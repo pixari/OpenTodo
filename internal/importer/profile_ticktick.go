@@ -131,67 +131,7 @@ func (tickTickProfile) Read(rd io.Reader, opts Options) (*Parsed, error) {
 			row.fail("title is required")
 		}
 		row.Labels = splitList(get("Tags"))
-		switch get("Priority") {
-		case "5":
-			row.Priority = 1
-		case "3":
-			row.Priority = 2
-		case "1":
-			row.Priority = 3
-		case "0", "":
-		default:
-			row.warn("priority %q not recognised; imported as p4", get("Priority"))
-		}
-		zone := loc
-		if tz := get("Timezone"); tz != "" {
-			if z, err := time.LoadLocation(tz); err == nil {
-				zone = z
-			}
-		}
-		if d := get("Due Date"); d != "" {
-			due, err := tickTickDue(d, truthy(get("Is All Day")), truthy(get("Is Floating")), zone)
-			if err != nil {
-				row.warn("due date %q not understood; imported without a due date", d)
-			} else {
-				row.Due = due
-			}
-		}
-		if rem := get("Reminder"); rem != "" {
-			for _, part := range strings.Split(rem, ",") {
-				if part = strings.TrimSpace(part); part == "" {
-					continue
-				}
-				rr, err := reminderFromString(part, zone)
-				if err != nil {
-					row.warn("reminder %q not supported; dropped", part)
-					continue
-				}
-				if !rr.Absolute && truthy(get("Is All Day")) {
-					// An all-day task's trigger counts from midnight (PT9H is 09:00 on
-					// the day, as in iCalendar); ours count from 09:00.
-					rr.Offset -= 9 * 60
-				}
-				row.Reminders = append(row.Reminders, rr)
-			}
-		}
-		if rep := get("Repeat"); rep != "" {
-			setRecurrence(&row, rep)
-		}
-		switch get("Status") {
-		case "2":
-			row.Completed = true
-		case "-1":
-			row.Completed = true
-			row.Labels = append(row.Labels, "canceled")
-		}
-		if row.Completed {
-			if ts, err := tickTickTime(get("Completed Time"), zone); err == nil {
-				row.CompletedAt = ts
-			}
-		}
-		if ts, err := tickTickTime(get("Created Time"), zone); err == nil {
-			row.CreatedAt = ts
-		}
+		tickTickTaskFields(&row, get, loc)
 		content := get("Content")
 		if strings.EqualFold(get("Kind"), "CHECKLIST") {
 			out.Rows = append(out.Rows, row)
@@ -214,6 +154,73 @@ func (tickTickProfile) Read(rd io.Reader, opts Options) (*Parsed, error) {
 		}
 	}
 	return out, nil
+}
+
+// tickTickTaskFields reads a task row's priority, due date, reminders,
+// repeat rule, status and timestamps; loc is the import's zone, which the
+// row's Timezone overrides.
+func tickTickTaskFields(row *Row, get func(string) string, loc *time.Location) {
+	switch get("Priority") {
+	case "5":
+		row.Priority = 1
+	case "3":
+		row.Priority = 2
+	case "1":
+		row.Priority = 3
+	case "0", "":
+	default:
+		row.warn("priority %q not recognised; imported as p4", get("Priority"))
+	}
+	zone := loc
+	if tz := get("Timezone"); tz != "" {
+		if z, err := time.LoadLocation(tz); err == nil {
+			zone = z
+		}
+	}
+	if d := get("Due Date"); d != "" {
+		due, err := tickTickDue(d, truthy(get("Is All Day")), truthy(get("Is Floating")), zone)
+		if err != nil {
+			row.warn("due date %q not understood; imported without a due date", d)
+		} else {
+			row.Due = due
+		}
+	}
+	if rem := get("Reminder"); rem != "" {
+		for _, part := range strings.Split(rem, ",") {
+			if part = strings.TrimSpace(part); part == "" {
+				continue
+			}
+			rr, err := reminderFromString(part, zone)
+			if err != nil {
+				row.warn("reminder %q not supported; dropped", part)
+				continue
+			}
+			if !rr.Absolute && truthy(get("Is All Day")) {
+				// An all-day task's trigger counts from midnight (PT9H is 09:00 on
+				// the day, as in iCalendar); ours count from 09:00.
+				rr.Offset -= 9 * 60
+			}
+			row.Reminders = append(row.Reminders, rr)
+		}
+	}
+	if rep := get("Repeat"); rep != "" {
+		setRecurrence(row, rep)
+	}
+	switch get("Status") {
+	case "2":
+		row.Completed = true
+	case "-1":
+		row.Completed = true
+		row.Labels = append(row.Labels, "canceled")
+	}
+	if row.Completed {
+		if ts, err := tickTickTime(get("Completed Time"), zone); err == nil {
+			row.CompletedAt = ts
+		}
+	}
+	if ts, err := tickTickTime(get("Created Time"), zone); err == nil {
+		row.CreatedAt = ts
+	}
 }
 
 // tickTickDue reads "2026-10-14T16:00:00+0000" as the date (all-day) or the

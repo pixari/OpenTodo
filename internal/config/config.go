@@ -160,125 +160,20 @@ func Load() (Config, error) {
 
 		TrashRetentionDays: DefaultTrashRetentionDays,
 	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_BASE_URL")); v != "" {
-		u, err := url.Parse(v)
-		if err != nil || u.Scheme == "" || u.Host == "" {
-			return c, fmt.Errorf("OPENTODO_BASE_URL must be an absolute URL, got %q", v)
-		}
-		c.BaseURL = u
+	if err := c.loadServerVars(); err != nil {
+		return c, err
 	}
-	if v := os.Getenv("OPENTODO_ALLOW_SIGNUP"); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return c, fmt.Errorf("OPENTODO_ALLOW_SIGNUP must be true or false, got %q", v)
-		}
-		c.AllowSignup = b
+	if err := c.loadToggles(); err != nil {
+		return c, err
 	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_SETUP_TOKEN")); v != "" {
-		if len(v) < MinSetupTokenLen {
-			return c, fmt.Errorf("OPENTODO_SETUP_TOKEN must be at least %d characters when set", MinSetupTokenLen)
-		}
-		c.SetupToken = v
+	if err := c.loadTrashAndPush(); err != nil {
+		return c, err
 	}
-	if v := os.Getenv("OPENTODO_SESSION_DAYS"); v != "" {
-		d, err := strconv.Atoi(v)
-		if err != nil || d < 1 {
-			return c, fmt.Errorf("OPENTODO_SESSION_DAYS must be a positive integer, got %q", v)
-		}
-		c.SessionTTL = time.Duration(d) * 24 * time.Hour
+	if err := c.loadOIDC(); err != nil {
+		return c, err
 	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_IMPORT_MAX_MB")); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil || n < 1 || n > MaxImportMaxMB {
-			return c, fmt.Errorf("OPENTODO_IMPORT_MAX_MB must be an integer from 1 to %d, got %q", MaxImportMaxMB, v)
-		}
-		c.ImportMaxMB = n
-	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_WEBHOOKS_ALLOW_PRIVATE")); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return c, fmt.Errorf("OPENTODO_WEBHOOKS_ALLOW_PRIVATE must be true or false, got %q", v)
-		}
-		c.WebhooksAllowPrivate = &b
-	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_MCP")); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return c, fmt.Errorf("OPENTODO_MCP must be true or false, got %q", v)
-		}
-		c.MCP = &b
-	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_MCP_WRITES")); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return c, fmt.Errorf("OPENTODO_MCP_WRITES must be true or false, got %q", v)
-		}
-		c.MCPWrites = &b
-	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_CALDAV")); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return c, fmt.Errorf("OPENTODO_CALDAV must be true or false, got %q", v)
-		}
-		c.CalDAV = &b
-	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_CALENDAR_FEEDS")); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return c, fmt.Errorf("OPENTODO_CALENDAR_FEEDS must be true or false, got %q", v)
-		}
-		c.CalendarFeeds = &b
-	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_TRASH_RETENTION_DAYS")); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil || n < 0 || n > MaxTrashRetentionDays {
-			return c, fmt.Errorf("OPENTODO_TRASH_RETENTION_DAYS must be an integer from 0 (never purge) to %d, got %q", MaxTrashRetentionDays, v)
-		}
-		c.TrashRetentionDays = n
-	}
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("OPENTODO_PUSH"))) {
-	case "", "on", "true", "1", "yes":
-	case "off", "false", "0", "no":
-		c.PushDisabled = true
-	default:
-		return c, fmt.Errorf("OPENTODO_PUSH must be on or off, got %q", os.Getenv("OPENTODO_PUSH"))
-	}
-	c.OIDC = OIDCEnv{
-		Issuer:       strings.TrimRight(strings.TrimSpace(os.Getenv("OPENTODO_OIDC_ISSUER")), "/"),
-		ClientID:     strings.TrimSpace(os.Getenv("OPENTODO_OIDC_CLIENT_ID")),
-		ClientSecret: strings.TrimSpace(os.Getenv("OPENTODO_OIDC_CLIENT_SECRET")),
-		DisplayName:  strings.TrimSpace(os.Getenv("OPENTODO_OIDC_DISPLAY_NAME")),
-	}
-	if c.OIDC.Issuer != "" {
-		if u, err := url.Parse(c.OIDC.Issuer); err != nil || u.Scheme != "https" || u.Host == "" {
-			return c, fmt.Errorf("OPENTODO_OIDC_ISSUER must be an https URL, got %q", c.OIDC.Issuer)
-		}
-	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_OIDC_SSO_ONLY")); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return c, fmt.Errorf("OPENTODO_OIDC_SSO_ONLY must be true or false, got %q", v)
-		}
-		c.OIDC.SSOOnly = &b
-	}
-	if v := strings.TrimSpace(os.Getenv("OPENTODO_DEMO")); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return c, fmt.Errorf("OPENTODO_DEMO must be true or false, got %q", v)
-		}
-		c.Demo = b
-	}
-	for _, v := range []struct {
-		name string
-		dst  *int
-	}{{"OPENTODO_DEMO_MAX_SANDBOXES", &c.DemoMaxSandboxes}, {"OPENTODO_DEMO_MAX_DB_MB", &c.DemoMaxDBMB}} {
-		if raw := strings.TrimSpace(os.Getenv(v.name)); raw != "" {
-			n, err := strconv.Atoi(raw)
-			if err != nil || n < 1 || n > 1000000 {
-				return c, fmt.Errorf("%s must be a positive integer, got %q", v.name, raw)
-			}
-			*v.dst = n
-		}
+	if err := c.loadDemo(); err != nil {
+		return c, err
 	}
 	if raw := strings.TrimSpace(os.Getenv("OPENTODO_TRUSTED_PROXIES")); raw != "" {
 		// Lenient on purpose (trusted-proxies-lenient): a typo must not stop the
@@ -382,6 +277,147 @@ func (c Config) PasskeysAvailable() bool {
 		return true
 	}
 	return false
+}
+
+// loadServerVars reads the base URL, sign-up, the setup token, the session
+// length and the import size limit.
+func (c *Config) loadServerVars() error {
+	if v := strings.TrimSpace(os.Getenv("OPENTODO_BASE_URL")); v != "" {
+		u, err := url.Parse(v)
+		if err != nil || u.Scheme == "" || u.Host == "" {
+			return fmt.Errorf("OPENTODO_BASE_URL must be an absolute URL, got %q", v)
+		}
+		c.BaseURL = u
+	}
+	if v := os.Getenv("OPENTODO_ALLOW_SIGNUP"); v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("OPENTODO_ALLOW_SIGNUP must be true or false, got %q", v)
+		}
+		c.AllowSignup = b
+	}
+	if v := strings.TrimSpace(os.Getenv("OPENTODO_SETUP_TOKEN")); v != "" {
+		if len(v) < MinSetupTokenLen {
+			return fmt.Errorf("OPENTODO_SETUP_TOKEN must be at least %d characters when set", MinSetupTokenLen)
+		}
+		c.SetupToken = v
+	}
+	if v := os.Getenv("OPENTODO_SESSION_DAYS"); v != "" {
+		d, err := strconv.Atoi(v)
+		if err != nil || d < 1 {
+			return fmt.Errorf("OPENTODO_SESSION_DAYS must be a positive integer, got %q", v)
+		}
+		c.SessionTTL = time.Duration(d) * 24 * time.Hour
+	}
+	if v := strings.TrimSpace(os.Getenv("OPENTODO_IMPORT_MAX_MB")); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > MaxImportMaxMB {
+			return fmt.Errorf("OPENTODO_IMPORT_MAX_MB must be an integer from 1 to %d, got %q", MaxImportMaxMB, v)
+		}
+		c.ImportMaxMB = n
+	}
+	return nil
+}
+
+// loadToggles reads the feature switches an operator may preset; unset ones
+// stay nil.
+func (c *Config) loadToggles() error {
+	var err error
+	if c.WebhooksAllowPrivate, err = optionalBool("OPENTODO_WEBHOOKS_ALLOW_PRIVATE"); err != nil {
+		return err
+	}
+	if c.MCP, err = optionalBool("OPENTODO_MCP"); err != nil {
+		return err
+	}
+	if c.MCPWrites, err = optionalBool("OPENTODO_MCP_WRITES"); err != nil {
+		return err
+	}
+	if c.CalDAV, err = optionalBool("OPENTODO_CALDAV"); err != nil {
+		return err
+	}
+	if c.CalendarFeeds, err = optionalBool("OPENTODO_CALENDAR_FEEDS"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// loadTrashAndPush reads the trash retention and the web push switch.
+func (c *Config) loadTrashAndPush() error {
+	if v := strings.TrimSpace(os.Getenv("OPENTODO_TRASH_RETENTION_DAYS")); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 || n > MaxTrashRetentionDays {
+			return fmt.Errorf("OPENTODO_TRASH_RETENTION_DAYS must be an integer from 0 (never purge) to %d, got %q", MaxTrashRetentionDays, v)
+		}
+		c.TrashRetentionDays = n
+	}
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("OPENTODO_PUSH"))) {
+	case "", "on", "true", "1", "yes":
+	case "off", "false", "0", "no":
+		c.PushDisabled = true
+	default:
+		return fmt.Errorf("OPENTODO_PUSH must be on or off, got %q", os.Getenv("OPENTODO_PUSH"))
+	}
+	return nil
+}
+
+// loadOIDC reads the single sign-on overrides (OPENTODO_OIDC_*).
+func (c *Config) loadOIDC() error {
+	c.OIDC = OIDCEnv{
+		Issuer:       strings.TrimRight(strings.TrimSpace(os.Getenv("OPENTODO_OIDC_ISSUER")), "/"),
+		ClientID:     strings.TrimSpace(os.Getenv("OPENTODO_OIDC_CLIENT_ID")),
+		ClientSecret: strings.TrimSpace(os.Getenv("OPENTODO_OIDC_CLIENT_SECRET")),
+		DisplayName:  strings.TrimSpace(os.Getenv("OPENTODO_OIDC_DISPLAY_NAME")),
+	}
+	if c.OIDC.Issuer != "" {
+		if u, err := url.Parse(c.OIDC.Issuer); err != nil || u.Scheme != "https" || u.Host == "" {
+			return fmt.Errorf("OPENTODO_OIDC_ISSUER must be an https URL, got %q", c.OIDC.Issuer)
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("OPENTODO_OIDC_SSO_ONLY")); v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("OPENTODO_OIDC_SSO_ONLY must be true or false, got %q", v)
+		}
+		c.OIDC.SSOOnly = &b
+	}
+	return nil
+}
+
+// loadDemo reads demo mode and its limits.
+func (c *Config) loadDemo() error {
+	if v := strings.TrimSpace(os.Getenv("OPENTODO_DEMO")); v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("OPENTODO_DEMO must be true or false, got %q", v)
+		}
+		c.Demo = b
+	}
+	for _, v := range []struct {
+		name string
+		dst  *int
+	}{{"OPENTODO_DEMO_MAX_SANDBOXES", &c.DemoMaxSandboxes}, {"OPENTODO_DEMO_MAX_DB_MB", &c.DemoMaxDBMB}} {
+		if raw := strings.TrimSpace(os.Getenv(v.name)); raw != "" {
+			n, err := strconv.Atoi(raw)
+			if err != nil || n < 1 || n > 1000000 {
+				return fmt.Errorf("%s must be a positive integer, got %q", v.name, raw)
+			}
+			*v.dst = n
+		}
+	}
+	return nil
+}
+
+// optionalBool reads a boolean variable; unset (or blank) is nil.
+func optionalBool(name string) (*bool, error) {
+	v := strings.TrimSpace(os.Getenv(name))
+	if v == "" {
+		return nil, nil
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return nil, fmt.Errorf("%s must be true or false, got %q", name, v)
+	}
+	return &b, nil
 }
 
 func getenv(key, def string) string {

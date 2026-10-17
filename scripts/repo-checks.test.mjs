@@ -4,6 +4,8 @@
 // migration numbering against the base branch (sync-convergence). The release
 // gates (ci-release-gates): pinned actions and images, timeouts, publishing only
 // after every gate, signed and attested artefacts, CI running `make check`.
+// Contributor docs (contributor-docs-and-template-checks): every internal/ package
+// and token scope named in AGENTS.md and docs/architecture.md.
 // Run: node --test scripts/repo-checks.test.mjs
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -317,4 +319,46 @@ test('.dockerignore leaves out what the image does not need and keeps what the D
   }
   // Files inside copied folders that the web build needs stay in.
   for (const p of ['web/src/main.tsx', 'web/package-lock.json', 'internal/web/web.go', 'go.sum']) assert.ok(!dockerIgnored(p), `${p} stays in the build context`)
+})
+
+// ---- contributor docs (OpenSpec change contributor-docs-and-template-checks) ----
+
+/** Every Go package under internal/ (a directory holding .go files), as `internal/<path>`. */
+function internalPackages(dir = 'internal') {
+  const out = []
+  const entries = readdirSync(path.join(root, dir), { withFileTypes: true })
+  if (entries.some((e) => e.isFile() && e.name.endsWith('.go'))) out.push(dir)
+  for (const e of entries) {
+    if (e.isDirectory() && !['testdata', 'dist', 'node_modules'].includes(e.name)) out.push(...internalPackages(`${dir}/${e.name}`))
+  }
+  return out
+}
+
+test('AGENTS.md names every internal/ package', () => {
+  const agents = read('AGENTS.md')
+  const pkgs = internalPackages()
+  assert.ok(pkgs.length > 30, `expected the internal/ packages, found ${pkgs.length}`)
+  const missing = pkgs.filter((p) => !agents.includes('`' + p + '`'))
+  assert.deepEqual(missing, [], 'add each package to the Layout section of AGENTS.md as `internal/<path>` with what it does')
+})
+
+test('docs/architecture.md has a row for every internal/ package', () => {
+  const arch = read('docs/architecture.md')
+  const missing = []
+  for (const p of internalPackages()) {
+    const [, top, ...sub] = p.split('/')
+    if (sub.length === 0 ? !arch.includes('| `' + top + '` |') : !arch.includes('`' + sub.join('/') + '`')) missing.push(p)
+  }
+  assert.deepEqual(missing, [], 'add a row (or, for a sub-package, a mention in its parent row) to "Server packages" in docs/architecture.md')
+})
+
+test('AGENTS.md lists every API token scope and does not call the MCP server read-only', () => {
+  const agents = read('AGENTS.md')
+  const scopes = [...read('internal/auth/service.go').matchAll(/^\s*Scope[A-Z]\w*\s*=\s*"([a-z]+)"/gm)].map((m) => m[1])
+  assert.ok(scopes.length >= 4, `expected the token scopes, found ${scopes.join(', ')}`)
+  const listed = agents.match(/API tokens have a scope (`[a-z]+`(?:\|`[a-z]+`)*)/)
+  assert.ok(listed, 'AGENTS.md names the token scopes as `a`|`b`|...')
+  assert.deepEqual(listed[1].split('|').map((s) => s.slice(1, -1)).sort(), [...scopes].sort())
+  assert.doesNotMatch(agents, /`internal\/mcp` read-only/, 'the MCP server has write tools (agent tokens)')
+  assert.match(agents, /`internal\/mcp`[^;]*write tools/)
 })

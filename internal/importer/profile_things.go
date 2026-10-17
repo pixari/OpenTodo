@@ -137,143 +137,29 @@ func (t *thingsReader) check() error {
 }
 
 func (t *thingsReader) read(opts Options) error {
-	// Tags, with parents flattened as "parent/child".
-	tagName := map[string]string{}
-	tagParent := map[string]string{}
-	rows, err := t.db.QueryContext(t.ctx, "SELECT uuid, COALESCE(title, ''), COALESCE(parent, '') FROM TMTag")
+	tagsOf, err := t.readTags()
 	if err != nil {
 		return err
 	}
-	for rows.Next() {
-		var id, title, parent string
-		if err := rows.Scan(&id, &title, &parent); err != nil {
-			rows.Close()
-			return err
-		}
-		tagName[id], tagParent[id] = strings.TrimSpace(title), parent
-	}
-	rows.Close()
-	fullTag := func(id string) string {
-		name, seen := tagName[id], map[string]bool{id: true}
-		for p := tagParent[id]; p != "" && !seen[p]; p = tagParent[p] {
-			seen[p] = true
-			name = tagName[p] + "/" + name
-		}
-		return name
-	}
-	tagsOf := map[string][]string{}
-	rows, err = t.db.QueryContext(t.ctx, "SELECT tasks, tags FROM TMTaskTag")
+	line, err := t.readAreas()
 	if err != nil {
 		return err
 	}
-	for rows.Next() {
-		var task, tag string
-		if err := rows.Scan(&task, &tag); err != nil {
-			rows.Close()
-			return err
-		}
-		if n := fullTag(tag); n != "" {
-			tagsOf[task] = append(tagsOf[task], n)
-		}
-	}
-	rows.Close()
-
-	// Areas become parent projects.
-	rows, err = t.db.QueryContext(t.ctx, `SELECT uuid, COALESCE(title, '') FROM TMArea ORDER BY "index"`)
+	tasks, err := t.readTasks()
 	if err != nil {
 		return err
 	}
-	line := 0
-	for rows.Next() {
-		var id, title string
-		if err := rows.Scan(&id, &title); err != nil {
-			rows.Close()
-			return err
-		}
-		line++
-		row := Row{Line: line, Kind: KindProject, SourceID: "things:" + id, Title: strings.TrimSpace(title)}
-		if row.Title == "" {
-			row.fail("area title is required")
-		}
-		t.out.Rows = append(t.out.Rows, row)
-	}
-	rows.Close()
-
-	type task struct {
-		id, title, notes, area, project, heading string
-		typ, status, start, bucket               int
-		trashed                                  bool
-		startDate, deadline, reminder            sql.NullInt64
-		created, stopped                         sql.NullFloat64
-		rule                                     []byte
-	}
-	var tasks []task
-	rows, err = t.db.QueryContext(t.ctx, `SELECT uuid, COALESCE(title, ''), COALESCE(notes, ''), type, status, trashed,
-		start, COALESCE(startBucket, 0), startDate, deadline, reminderTime, creationDate, stopDate,
-		COALESCE(area, ''), COALESCE(project, ''), COALESCE(heading, ''), rt1_recurrenceRule
-		FROM TMTask ORDER BY type DESC, "index"`)
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
-		var k task
-		if err := rows.Scan(&k.id, &k.title, &k.notes, &k.typ, &k.status, &k.trashed, &k.start, &k.bucket,
-			&k.startDate, &k.deadline, &k.reminder, &k.created, &k.stopped, &k.area, &k.project, &k.heading, &k.rule); err != nil {
-			rows.Close()
-			return err
-		}
-		tasks = append(tasks, k)
-	}
-	rows.Close()
-	byID := map[string]*task{}
+	byID := map[string]*thingsTask{}
 	for i := range tasks {
 		byID[tasks[i].id] = &tasks[i]
 	}
-	trashed := func(k *task) bool {
-		for cur, n := k, 0; cur != nil && n < 4; n++ {
-			if cur.trashed {
-				return true
-			}
-			switch {
-			case cur.heading != "":
-				cur = byID[cur.heading]
-			case cur.project != "":
-				cur = byID[cur.project]
-			default:
-				cur = nil
-			}
-		}
-		return false
-	}
-
-	checklist := map[string][]Row{}
-	rows, err = t.db.QueryContext(t.ctx, `SELECT uuid, COALESCE(title, ''), status, task, stopDate FROM TMChecklistItem ORDER BY "index"`)
+	checklist, err := t.readChecklist()
 	if err != nil {
 		return err
 	}
-	for rows.Next() {
-		var id, title, owner string
-		var status int
-		var stopped sql.NullFloat64
-		if err := rows.Scan(&id, &title, &status, &owner, &stopped); err != nil {
-			rows.Close()
-			return err
-		}
-		if strings.TrimSpace(title) == "" {
-			continue
-		}
-		r := Row{Kind: KindTask, SourceID: "things:" + id, Title: strings.TrimSpace(title), ParentSourceID: "things:" + owner,
-			Completed: status == 3 || status == 2}
-		if r.Completed && stopped.Valid {
-			r.CompletedAt = int64(stopped.Float64 * 1000)
-		}
-		checklist[owner] = append(checklist[owner], r)
-	}
-	rows.Close()
-
 	for i := range tasks {
 		k := &tasks[i]
-		if trashed(k) {
+		if thingsTrashed(k, byID) {
 			continue
 		}
 		line++
@@ -300,67 +186,7 @@ func (t *thingsReader) read(opts Options) error {
 			}
 			t.out.Rows = append(t.out.Rows, row)
 		case 0: // to-do
-			row := Row{Line: line, Kind: KindTask, SourceID: "things:" + k.id, Title: strings.TrimSpace(k.title), Labels: tagsOf[k.id]}
-			if row.Title == "" {
-				row.fail("title is required")
-			}
-			row.Description = thingsNotes(k.notes)
-			switch {
-			case k.heading != "":
-				if h := byID[k.heading]; h != nil {
-					row.ProjectSourceID = "things:" + h.project
-					row.SectionName = strings.TrimSpace(h.title)
-				}
-			case k.project != "":
-				row.ProjectSourceID = "things:" + k.project
-			case k.area != "":
-				row.ProjectSourceID = "things:" + k.area
-			}
-			if k.startDate.Valid {
-				if d, ok := thingsDate(k.startDate.Int64); ok {
-					row.Due = &Due{Date: d}
-					if k.reminder.Valid {
-						if clock, ok := thingsClock(k.reminder.Int64); ok {
-							if at, err := time.ParseInLocation("2006-01-02 15:04", d+" "+clock, t.loc); err == nil {
-								row.Reminders = append(row.Reminders, Reminder{Absolute: true, At: at.UnixMilli()})
-							}
-						} else {
-							row.warn("reminder time not understood; dropped")
-						}
-					}
-				}
-			}
-			if k.deadline.Valid {
-				if d, ok := thingsDate(k.deadline.Int64); ok {
-					row.Deadline = d
-				}
-			}
-			if k.start == 2 {
-				row.Start = "someday"
-			}
-			if k.bucket == 1 {
-				row.Evening = true
-			}
-			if len(k.rule) > 0 {
-				if rule, ok := thingsRecurrence(k.rule); ok {
-					row.Recurrence = rule
-				} else {
-					row.warn("repeat rule not supported; imported without it")
-				}
-			}
-			switch k.status {
-			case 3:
-				row.Completed = true
-			case 2:
-				row.Completed = true
-				row.Labels = append(row.Labels, "canceled")
-			}
-			if row.Completed && k.stopped.Valid {
-				row.CompletedAt = int64(k.stopped.Float64 * 1000)
-			}
-			if k.created.Valid {
-				row.CreatedAt = int64(k.created.Float64 * 1000)
-			}
+			row := t.todoRow(k, line, byID, tagsOf)
 			t.out.Rows = append(t.out.Rows, row)
 			for _, c := range checklist[k.id] {
 				line++
@@ -374,6 +200,216 @@ func (t *thingsReader) read(opts Options) error {
 		}
 	}
 	return nil
+}
+
+// readTags returns each task's tags, with parents flattened as "parent/child".
+func (t *thingsReader) readTags() (map[string][]string, error) {
+	tagName := map[string]string{}
+	tagParent := map[string]string{}
+	rows, err := t.db.QueryContext(t.ctx, "SELECT uuid, COALESCE(title, ''), COALESCE(parent, '') FROM TMTag")
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var id, title, parent string
+		if err := rows.Scan(&id, &title, &parent); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		tagName[id], tagParent[id] = strings.TrimSpace(title), parent
+	}
+	rows.Close()
+	fullTag := func(id string) string {
+		name, seen := tagName[id], map[string]bool{id: true}
+		for p := tagParent[id]; p != "" && !seen[p]; p = tagParent[p] {
+			seen[p] = true
+			name = tagName[p] + "/" + name
+		}
+		return name
+	}
+	tagsOf := map[string][]string{}
+	rows, err = t.db.QueryContext(t.ctx, "SELECT tasks, tags FROM TMTaskTag")
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var task, tag string
+		if err := rows.Scan(&task, &tag); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if n := fullTag(tag); n != "" {
+			tagsOf[task] = append(tagsOf[task], n)
+		}
+	}
+	rows.Close()
+	return tagsOf, nil
+}
+
+// readAreas adds the areas as parent projects and returns the last line number.
+func (t *thingsReader) readAreas() (int, error) {
+	rows, err := t.db.QueryContext(t.ctx, `SELECT uuid, COALESCE(title, '') FROM TMArea ORDER BY "index"`)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	line := 0
+	for rows.Next() {
+		var id, title string
+		if err := rows.Scan(&id, &title); err != nil {
+			return 0, err
+		}
+		line++
+		row := Row{Line: line, Kind: KindProject, SourceID: "things:" + id, Title: strings.TrimSpace(title)}
+		if row.Title == "" {
+			row.fail("area title is required")
+		}
+		t.out.Rows = append(t.out.Rows, row)
+	}
+	return line, nil
+}
+
+// thingsTask is one TMTask row: a to-do (type 0), a project (1) or a heading (2).
+type thingsTask struct {
+	id, title, notes, area, project, heading string
+	typ, status, start, bucket               int
+	trashed                                  bool
+	startDate, deadline, reminder            sql.NullInt64
+	created, stopped                         sql.NullFloat64
+	rule                                     []byte
+}
+
+func (t *thingsReader) readTasks() ([]thingsTask, error) {
+	var tasks []thingsTask
+	rows, err := t.db.QueryContext(t.ctx, `SELECT uuid, COALESCE(title, ''), COALESCE(notes, ''), type, status, trashed,
+		start, COALESCE(startBucket, 0), startDate, deadline, reminderTime, creationDate, stopDate,
+		COALESCE(area, ''), COALESCE(project, ''), COALESCE(heading, ''), rt1_recurrenceRule
+		FROM TMTask ORDER BY type DESC, "index"`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var k thingsTask
+		if err := rows.Scan(&k.id, &k.title, &k.notes, &k.typ, &k.status, &k.trashed, &k.start, &k.bucket,
+			&k.startDate, &k.deadline, &k.reminder, &k.created, &k.stopped, &k.area, &k.project, &k.heading, &k.rule); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, k)
+	}
+	return tasks, nil
+}
+
+// thingsTrashed reports whether k, its heading or its project is in the trash.
+func thingsTrashed(k *thingsTask, byID map[string]*thingsTask) bool {
+	for cur, n := k, 0; cur != nil && n < 4; n++ {
+		if cur.trashed {
+			return true
+		}
+		switch {
+		case cur.heading != "":
+			cur = byID[cur.heading]
+		case cur.project != "":
+			cur = byID[cur.project]
+		default:
+			cur = nil
+		}
+	}
+	return false
+}
+
+// readChecklist returns the checklist items, as subtask rows, by their to-do.
+func (t *thingsReader) readChecklist() (map[string][]Row, error) {
+	checklist := map[string][]Row{}
+	rows, err := t.db.QueryContext(t.ctx, `SELECT uuid, COALESCE(title, ''), status, task, stopDate FROM TMChecklistItem ORDER BY "index"`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, title, owner string
+		var status int
+		var stopped sql.NullFloat64
+		if err := rows.Scan(&id, &title, &status, &owner, &stopped); err != nil {
+			return nil, err
+		}
+		if strings.TrimSpace(title) == "" {
+			continue
+		}
+		r := Row{Kind: KindTask, SourceID: "things:" + id, Title: strings.TrimSpace(title), ParentSourceID: "things:" + owner,
+			Completed: status == 3 || status == 2}
+		if r.Completed && stopped.Valid {
+			r.CompletedAt = int64(stopped.Float64 * 1000)
+		}
+		checklist[owner] = append(checklist[owner], r)
+	}
+	return checklist, nil
+}
+
+// todoRow is the task row of a to-do.
+func (t *thingsReader) todoRow(k *thingsTask, line int, byID map[string]*thingsTask, tagsOf map[string][]string) Row {
+	row := Row{Line: line, Kind: KindTask, SourceID: "things:" + k.id, Title: strings.TrimSpace(k.title), Labels: tagsOf[k.id]}
+	if row.Title == "" {
+		row.fail("title is required")
+	}
+	row.Description = thingsNotes(k.notes)
+	switch {
+	case k.heading != "":
+		if h := byID[k.heading]; h != nil {
+			row.ProjectSourceID = "things:" + h.project
+			row.SectionName = strings.TrimSpace(h.title)
+		}
+	case k.project != "":
+		row.ProjectSourceID = "things:" + k.project
+	case k.area != "":
+		row.ProjectSourceID = "things:" + k.area
+	}
+	if k.startDate.Valid {
+		if d, ok := thingsDate(k.startDate.Int64); ok {
+			row.Due = &Due{Date: d}
+			if k.reminder.Valid {
+				if clock, ok := thingsClock(k.reminder.Int64); ok {
+					if at, err := time.ParseInLocation("2006-01-02 15:04", d+" "+clock, t.loc); err == nil {
+						row.Reminders = append(row.Reminders, Reminder{Absolute: true, At: at.UnixMilli()})
+					}
+				} else {
+					row.warn("reminder time not understood; dropped")
+				}
+			}
+		}
+	}
+	if k.deadline.Valid {
+		if d, ok := thingsDate(k.deadline.Int64); ok {
+			row.Deadline = d
+		}
+	}
+	if k.start == 2 {
+		row.Start = "someday"
+	}
+	if k.bucket == 1 {
+		row.Evening = true
+	}
+	if len(k.rule) > 0 {
+		if rule, ok := thingsRecurrence(k.rule); ok {
+			row.Recurrence = rule
+		} else {
+			row.warn("repeat rule not supported; imported without it")
+		}
+	}
+	switch k.status {
+	case 3:
+		row.Completed = true
+	case 2:
+		row.Completed = true
+		row.Labels = append(row.Labels, "canceled")
+	}
+	if row.Completed && k.stopped.Valid {
+		row.CompletedAt = int64(k.stopped.Float64 * 1000)
+	}
+	if k.created.Valid {
+		row.CreatedAt = int64(k.created.Float64 * 1000)
+	}
+	return row
 }
 
 // thingsDate unpacks Things' date integer: year<<16 | month<<12 | day<<7.

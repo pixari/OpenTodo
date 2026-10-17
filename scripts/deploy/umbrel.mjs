@@ -6,10 +6,10 @@
 // (deploy/umbrel/README.md). The rules come from that repository's .agents/skills/umbrel-package-app
 // and .tools/lint-apps.mjs.
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { parseYaml } from '../coolify-template-check.mjs'
-import { checkShared, readText, ROOT } from './common.mjs'
+import { checkShared, listFiles, readText, ROOT } from './common.mjs'
+import { parseYaml, YAML_COMPOSE, YAML_UMBREL_MANIFEST } from './yaml.mjs'
 
 export const MANIFEST = 'deploy/umbrel/umbrel-app.yml'
 export const COMPOSE = 'deploy/umbrel/docker-compose.yml'
@@ -43,94 +43,13 @@ const WHITELIST = {
 }
 const BLACKLIST = ['/api/v1/auth/register']
 
-const unquote = (v) => (/^"(.*)"$/.test(v) ? v.slice(1, -1).replace(/\\"/g, '"') : /^'(.*)'$/.test(v) ? v.slice(1, -1) : v)
-
 /**
- * Parses the YAML subset of an Umbrel manifest: block maps, block sequences of scalars or of maps
- * (`- key: value` with the other keys indented under it), `[]`, quoted scalars and folded `>-`
- * block scalars (single newlines fold to spaces, each blank line is a newline). Throws with a line
- * number on anything else.
+ * Parses an Umbrel manifest with the shared strict YAML subset parser (scripts/deploy/yaml.mjs,
+ * profile YAML_UMBREL_MANIFEST): string scalars, lists of maps, and folded `>-` text only
+ * (single newlines fold to spaces, each blank line is a newline). Throws with a line number on
+ * anything else.
  */
-export function parseManifest(text) {
-  const raw = text.split('\n')
-  const lines = []
-  for (let i = 0; i < raw.length; i++) {
-    const line = raw[i]
-    if (line.includes('\t')) throw new Error(`line ${i + 1}: tabs are not allowed`)
-    if (line.trim() === '' || line.trimStart().startsWith('#')) continue
-    const m = /^( *)(.*)$/.exec(line)
-    lines.push({ indent: m[1].length, text: m[2].trimEnd(), no: i + 1 })
-    if (/^(- )?[A-Za-z][\w-]*: >-$/.test(m[2].trimEnd())) {
-      // folded block: every following line indented deeper, or blank
-      const parts = []
-      let j = i + 1
-      while (j < raw.length && (raw[j].trim() === '' || raw[j].length - raw[j].trimStart().length > m[1].length)) parts.push(raw[j++])
-      while (parts.length && parts.at(-1).trim() === '') { parts.pop(); j-- }
-      lines.at(-1).folded = fold(parts)
-      i = j - 1
-    }
-  }
-  let pos = 0
-  function value(t, no, entry) {
-    if (entry.folded !== undefined) return entry.folded
-    if (t === '[]') return []
-    if (t === '""' || t === "''") return ''
-    if (/^["']/.test(t)) {
-      if (!/^"[^"]*"$|^'[^']*'$/.test(t)) throw new Error(`line ${no}: unterminated or nested quote: ${t}`)
-      return unquote(t)
-    }
-    if (/^[|>&*!{[]/.test(t) || / #/.test(t)) throw new Error(`line ${no}: unsupported YAML syntax: ${t}`)
-    return t
-  }
-  function block(indent) {
-    if (lines[pos].text.startsWith('- ')) {
-      const seq = []
-      while (pos < lines.length && lines[pos].indent === indent && lines[pos].text.startsWith('- ')) {
-        const entry = lines[pos]
-        const item = entry.text.slice(2)
-        if (/^[A-Za-z][\w-]*:( |$)/.test(item)) {
-          // a map item: its first key on the dash line, the rest indented two more
-          lines[pos] = { ...entry, indent: indent + 2, text: item }
-          seq.push(block(indent + 2))
-        } else {
-          seq.push(value(item, entry.no, entry))
-          pos++
-        }
-      }
-      return seq
-    }
-    const map = {}
-    while (pos < lines.length && lines[pos].indent === indent && !lines[pos].text.startsWith('- ')) {
-      const entry = lines[pos]
-      const m = /^([A-Za-z][\w-]*):(?: (.*))?$/.exec(entry.text)
-      if (!m) throw new Error(`line ${entry.no}: expected "key:" or "key: value", got: ${entry.text}`)
-      if (Object.hasOwn(map, m[1])) throw new Error(`line ${entry.no}: duplicate key ${m[1]}`)
-      pos++
-      if (m[2] !== undefined) map[m[1]] = value(m[2], entry.no, entry)
-      else if (pos < lines.length && lines[pos].indent > indent) map[m[1]] = block(lines[pos].indent)
-      else throw new Error(`line ${entry.no}: ${m[1]} has no value`)
-    }
-    if (pos < lines.length && lines[pos].indent > indent) throw new Error(`line ${lines[pos].no}: unexpected indentation`)
-    return map
-  }
-  if (!lines.length) return {}
-  if (lines[0].indent !== 0) throw new Error(`line ${lines[0].no}: document must start at column 0`)
-  const doc = block(0)
-  if (pos !== lines.length) throw new Error(`line ${lines[pos].no}: could not parse`)
-  return doc
-}
-
-function fold(parts) {
-  let out = ''
-  let blanks = 0
-  for (const p of parts) {
-    if (p.trim() === '') { blanks++; continue }
-    if (out) out += blanks ? '\n'.repeat(blanks) : ' '
-    out += p.trim()
-    blanks = 0
-  }
-  return out
-}
+export const parseManifest = (text) => parseYaml(text, YAML_UMBREL_MANIFEST)
 
 /** The top-level keys of a YAML text, in order. */
 const topKeys = (text) => [...text.matchAll(/^([A-Za-z][\w-]*):/gm)].map((m) => m[1])
@@ -222,7 +141,7 @@ export function checkCompose(text, ctx, root = ROOT) {
   if (!text.endsWith('\n')) errors.push('docker-compose.yml must end with a newline')
   let doc
   try {
-    doc = parseYaml(text)
+    doc = parseYaml(text, YAML_COMPOSE)
   } catch (e) {
     return { errors: [...errors, `docker-compose.yml is not in the supported YAML subset: ${e.message}`] }
   }
@@ -269,20 +188,13 @@ export function checkCompose(text, ctx, root = ROOT) {
   }
 }
 
-function files(dir) {
-  return readdirSync(dir).flatMap((n) => {
-    const p = join(dir, n)
-    return statSync(p).isDirectory() ? files(p) : [p]
-  })
-}
-
 /** deploy/umbrel/upstream/opentodo/ is the package folder as it goes into getumbrel/umbrel-apps. */
 export function checkUpstream(root = ROOT) {
   const errors = []
   const dir = join(root, UPSTREAM)
   if (!existsSync(dir)) return [`${UPSTREAM}/ is missing`]
   const want = ['data/.gitkeep', 'docker-compose.yml', 'umbrel-app.yml']
-  const have = files(dir).map((f) => relative(dir, f)).sort()
+  const have = listFiles(dir).map((f) => relative(dir, f)).sort()
   if (have.join(',') !== want.join(',')) errors.push(`${UPSTREAM}/ must hold exactly ${want.join(', ')} (no icon or gallery files), got: ${have.join(', ')}`)
   if (readText(MANIFEST, root) !== readText(`${UPSTREAM}/umbrel-app.yml`, root)) errors.push(`${UPSTREAM}/umbrel-app.yml must be identical to ${MANIFEST}`)
   if (readText(COMPOSE, root) !== readText(`${UPSTREAM}/docker-compose.yml`, root)) errors.push(`${UPSTREAM}/docker-compose.yml must be identical to ${COMPOSE}`)

@@ -335,6 +335,8 @@ The web app makes no network requests except to your own server: no analytics, c
 - backup destinations (S3 or WebDAV) you configure;
 - the single sign-on issuer you configure;
 - the IMAP mailbox you configure for email to task;
+- the SMTP server you configure for [outgoing email](docs/self-hosting/outgoing-email.md);
+- the calendar addresses people add to show [other calendars](docs/other-calendars.md) beside their tasks (private network addresses only if you allow them);
 - the model provider you enable for the [in-app assistant](docs/assistant.md) (off by default), only after a person has accepted what is sent and only while they wait for an answer.
 
 The CalDAV and MCP endpoints only answer requests; they never call out. The audit log records security events (sign-ins, tokens, invitations, exports), never task content, and stores client addresses only if the owner turns that on; see [SECURITY.md](SECURITY.md#what-is-logged). With optional [end-to-end encryption](docs/e2ee.md) the server holds only ciphertext for task content.

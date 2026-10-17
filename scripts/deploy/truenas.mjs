@@ -7,14 +7,14 @@
 // ci.py / copy-lib regenerates from lib_version); deploy/truenas/upstream/ is the
 // same folder at its path in truenas/apps and must be identical.
 //
-// The YAML files are parsed strictly (truenas-yaml.mjs). The Jinja template is read
+// The YAML files are parsed strictly (yaml.mjs). The Jinja template is read
 // line by line: every line that sets the image's behaviour must be one of the known
 // forms, so a change to it fails here until this checker understands it.
 
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { checkShared, readText, ROOT } from './common.mjs'
-import { parseYaml } from './truenas-yaml.mjs'
+import { parseYaml } from './yaml.mjs'
 
 export const APP = 'deploy/truenas/opentodo'
 export const UPSTREAM = 'deploy/truenas/upstream/ix-dev/community/opentodo'

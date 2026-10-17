@@ -3,13 +3,13 @@
 // listing and the form, whose schema defaults pick the image), index.ts (generate(),
 // which returns the services) and assets/. deploy/easypanel/upstream/templates/opentodo/
 // is that folder and must be identical. meta.yaml is parsed strictly
-// (truenas-yaml.mjs); index.ts is read with strict patterns for the one app service it
+// (yaml.mjs); index.ts is read with strict patterns for the one app service it
 // returns, so a template this checker does not understand fails instead of passing.
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { checkShared, ROOT } from './common.mjs'
-import { parseYaml } from './truenas-yaml.mjs'
+import { parseYaml } from './yaml.mjs'
 
 export const DIR = 'deploy/easypanel'
 export const UPSTREAM = 'deploy/easypanel/upstream/templates/opentodo'

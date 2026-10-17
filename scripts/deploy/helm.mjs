@@ -4,7 +4,7 @@
 // CHANGELOG.md and the image tag defaults to appVersion, so `helm upgrade` to a newer chart is
 // what moves an install to a newer release (a moving tag would never restart the pod).
 // Chart.yaml, values.yaml and artifacthub-repo.yml are read with the strict YAML parser
-// (truenas-yaml.mjs), values.schema.json with JSON.parse; the templates are Go templates, so
+// (yaml.mjs), values.schema.json with JSON.parse; the templates are Go templates, so
 // they are checked as text for the rules that matter (one replica, Recreate, non-root, fsGroup,
 // read-only root, probes, port, /data). When helm is installed (or HELM names it), helm lint
 // --strict and helm template run too; without it the check works offline.
@@ -13,7 +13,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { checkShared, latestRelease, readText, ROOT } from './common.mjs'
-import { parseYaml } from './truenas-yaml.mjs'
+import { parseYaml } from './yaml.mjs'
 
 export const DIR = 'deploy/helm/opentodo'
 export const CHART = `${DIR}/Chart.yaml`
