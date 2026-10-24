@@ -75,14 +75,15 @@ describe('expanded rows', () => {
     await key(focused(), 'ArrowRight')
     await waitFor(() => details().length === 1, 'the details')
     const d = details()[0]
-    expect(d.getAttribute('role')).toBe('group')
-    expect(d.getAttribute('aria-label')).toBe('Details of Pay rent')
+    const group = document.getElementById(openControl('Pay rent').getAttribute('aria-controls') ?? '')!
+    expect(group.getAttribute('role')).toBe('group')
+    expect(group.getAttribute('aria-label')).toBe('Details of Pay rent')
+    expect(group.contains(d)).toBe(true)
     expect(d.querySelector('[data-row-notes]')?.textContent).toContain('850')
     expect(d.querySelector('[data-facet="how"]')?.textContent).toContain('P2')
     expect(d.querySelector('[data-facet="how"]')?.textContent).toContain('20m')
     expect(d.querySelector('[data-row-details-open]')?.textContent).toBe('Open task')
     expect(openControl('Pay rent').getAttribute('aria-expanded')).toBe('true')
-    expect(openControl('Pay rent').getAttribute('aria-controls')).toBe(d.id)
     expect(focused()).toBe(openControl('Pay rent'))
     // The facts are read here, never edited: no fact is a button.
     expect(d.querySelectorAll('[data-row-facts] button').length).toBe(0)

@@ -41,8 +41,6 @@ export function shownParts(parts: FacetPart[]): FacetPart[] {
 
 export interface RowDetailsProps {
   task: Task
-  /** The element id the row's controls point at (`aria-controls`). */
-  id: string
   readOnly: boolean
   /** The list shows the subtasks as rows under the task: the details leave the checklist out. */
   childrenShown: boolean
@@ -50,7 +48,7 @@ export interface RowDetailsProps {
   onOpen: () => void
 }
 
-export default function RowDetails({ task, id, readOnly, childrenShown, onOpen }: RowDetailsProps) {
+export default function RowDetails({ task, readOnly, childrenShown, onOpen }: RowDetailsProps) {
   const { projects, labelMap } = useTaskDetailData()
   const children = useSubtasks(task.id)
   const parent = useTask(task.parent_id) ?? undefined
@@ -60,14 +58,13 @@ export default function RowDetails({ task, id, readOnly, childrenShown, onOpen }
   const progress = useMemo(() => progressOf({ id: task.id }, children), [task.id, children])
   const comments = useCommentCount(task.id)
   const attachments = useAttachmentCount(task.id)
-  const name = task.title || t('Untitled')
   const counts = [
     comments > 0 && { icon: 'message-circle' as const, text: t('{n, plural, one {# comment} other {# comments}}', { n: comments }), key: 'comments' },
     attachments > 0 && { icon: 'paperclip' as const, text: t('{n, plural, one {# attachment} other {# attachments}}', { n: attachments }), key: 'attachments' },
   ].filter((c): c is { icon: 'message-circle' | 'paperclip'; text: string; key: string } => !!c)
 
   return (
-    <div id={id} role="group" aria-label={t('Details of {title}', { title: name })} data-row-details={task.id}
+    <div data-row-details={task.id}
       className="min-w-0 basis-full space-y-2 pb-2 pt-1"
       // The details are not the row: a press here never opens the task, starts a drag or a swipe.
       onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>

@@ -650,9 +650,10 @@ function FullRow({ task, project, labels = [], assignee, assignedToMe = false, s
         details={canExpand ? { expanded: showDetails, controls: detailsId, onToggle: onExpand! } : undefined} />}
       {showDetails && (
         // Indented under the title column: past the leading slot, the checkbox and the time column (row-expand D3).
-        <div className={`min-w-0 basis-full pl-[3.25rem] ${column ? 'md:pl-[calc(3.75rem+var(--row-time-w))]' : ''}`}>
+        // The id lives here, so `aria-controls` names an element while the lazy details still load.
+        <div id={detailsId} role="group" aria-label={t('Details of {title}', { title: name })} className={`min-w-0 basis-full pl-[3.25rem] ${column ? 'md:pl-[calc(3.75rem+var(--row-time-w))]' : ''}`}>
           <Suspense fallback={null}>
-            <RowDetails task={task} id={detailsId} readOnly={readOnly} childrenShown={!!onToggleCollapse && hasChildren && !collapsed} onOpen={() => onOpen()} />
+            <RowDetails task={task} readOnly={readOnly} childrenShown={!!onToggleCollapse && hasChildren && !collapsed} onOpen={() => onOpen()} />
           </Suspense>
         </div>
       )}
