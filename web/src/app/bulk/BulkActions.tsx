@@ -75,7 +75,8 @@ export function bulkMenuGroups(ids: readonly string[], d: Data, a: { review: (ti
         title: t('Labels'), placeholder: t('Add to all, or remove from all…'), source: live, multiple: true, selected: common, rankContext: 'label',
         getKey: (l: Label) => l.id, getLabel: (l: Label) => l.name,
         // Add or remove is decided from the ticked tasks as stored at the click, not from the
-        // menu's read, which can still be loading (or show an earlier selection) on a quick pick.
+        // menu's read, which can still be loading on a quick pick; the open picker follows the
+        // read, so its marks appear when it lands and change after each pick.
         onPick: (l: Label) => { void labelToggle(ids, l.id) },
       } },
     ] },
@@ -117,7 +118,10 @@ async function labelToggle(ids: readonly string[], labelId: string) {
 /** Live data the menu needs, read while it is mounted. */
 function useBulkData(ids: readonly string[]): Data {
   const key = ids.join(',')
-  const tasks = useLiveQuery(() => readTicked(ids).then((r) => r.tasks), [key], [] as Task[])
+  // Tagged with the selection it was read for: until the read for this selection lands,
+  // the menu has no tasks (and marks no common label) rather than an earlier selection's.
+  const read = useLiveQuery(() => readTicked(ids).then((r) => ({ key, tasks: r.tasks })), [key])
+  const tasks = useMemo(() => (read?.key === key ? read.tasks : []), [read, key])
   const labels = useAllLabels()
   const projects = useProjects()
   const sections = useLiveSections()

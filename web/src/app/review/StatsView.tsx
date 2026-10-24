@@ -154,7 +154,7 @@ function Tiles({ dash, vs }: { dash: Dashboard; vs: string }) {
     tracked.noEstimate > 0 ? t('{n, plural, one {# tracked task has no estimate} other {# tracked tasks have no estimate}}', { n: tracked.noEstimate }) : '',
   ].filter(Boolean).join(' · ')
   return (
-    <dl className="grid grid-cols-1 gap-3 min-[340px]:grid-cols-2 lg:grid-cols-4" data-testid="stats-tiles">
+    <dl className="grid grid-cols-1 gap-3 min-[21.25rem]:grid-cols-2 lg:grid-cols-4" data-testid="stats-tiles">
       <StatTile testId="done" label={t('Done')} value={String(done.value)} change={change(done.value, done.previous, vs)} note={t('including each day of a recurring task')} />
       {onTime.value === null
         ? <StatTile testId="on-time" label={t('On time')} value="–" note={t('No due dates in this period')} />

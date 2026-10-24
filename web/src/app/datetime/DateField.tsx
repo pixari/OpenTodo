@@ -165,6 +165,7 @@ export function CalendarGrid({ value, prefs, onPick, today = logicalToday(), com
         <h3 id={headingId} className="flex-1 text-center text-body font-semibold text-default" aria-live="polite">{monthName().format(dateOf(month))}</h3>
         <IconButton icon="chevron-right" label={t('Next month')} size="sm" onClick={() => shiftMonth(1)} />
       </div>
+      {/* On touch no gap around the 44 px days, so seven fit a phone with a large text size (precision-polish-2). */}
       <table ref={grid} role="grid" aria-labelledby={headingId} className="w-full border-collapse text-center text-body" onKeyDown={onKey}>
         <thead>
           <tr>
@@ -184,7 +185,7 @@ export function CalendarGrid({ value, prefs, onPick, today = logicalToday(), com
                 const isToday = d === today
                 const isMarked = marked?.date === d
                 return (
-                  <td key={d} role="gridcell" aria-selected={selected} className="p-0.5">
+                  <td key={d} role="gridcell" aria-selected={selected} className="p-0.5 pointer-coarse:p-0">
                     <button type="button" data-date={d} tabIndex={d === cursor ? 0 : -1} data-autofocus={d === cursor ? '' : undefined}
                       aria-label={isMarked ? `${fullDate().format(dateOf(d))}, ${marked.label}` : fullDate().format(dateOf(d))} aria-current={isToday ? 'date' : undefined}
                       data-marked={isMarked || undefined}

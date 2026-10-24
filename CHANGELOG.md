@@ -8,6 +8,15 @@ All notable changes to OpenTodo are documented here. The format follows [Keep a 
 
 - **Shell completion for `ot`.** `ot completion bash`, `ot completion zsh` or `ot completion fish` prints a script; install it once and Tab completes commands, flags and fixed values, plus project, label and workspace names, open task ids with their titles, and `#project` and `@label` in `ot add`, read from your profile's server. Offline it still completes commands and flags and prints nothing into your prompt. ([Shell completion](docs/cli.md#shell-completion))
 
+### Changed
+
+- **The briefing links each full day, and has a switch in Settings.** When Upcoming says "Friday and Monday are already full", Friday and Monday are now separate links, each opening Upcoming at that day, in every language. **Settings → General → Briefing** has a **Show the briefing** switch, the same choice as **Hide briefing** in the menu of Today and Upcoming, on all your devices. "2 tasks are late" still selects those tasks, ready for the selection bar; <kbd>Esc</kbd> clears them. ([The briefing](docs/briefing.md))
+
+### Fixed
+
+- **The bulk label picker shows the right checkmarks.** Opened with <kbd>L</kbd> straight after ticking tasks, the label picker showed no checkmarks until it was closed, and none changed after a pick; it now marks the labels every ticked task has as soon as it has read them, and updates after each pick.
+- **Larger text sizes on the rest of the app.** With the browser's text size at 20 or 24 px, the date picker's month no longer runs off a phone, the Share dialog's email field gets its own line, Settings keeps your name readable beside your role, the command bar's mode buttons wrap instead of overlapping, Statistics shows its figures in one column on a phone, and the Inbox's **Process** on a phone keeps only its icon so the title fits. Display mode, dialogs and the wide task panel now switch layouts at the same points as the rest of the app.
+
 ## [0.11.0] - 2026-10-24
 
 OpenTodo 0.11.0 is **Precision**, a new look for the whole app. Every task is one line with its date, project and labels in aligned columns, pages fill one quiet surface, and colour is kept for what needs you. **Today tells you in a sentence what stands out**, and each part of that sentence opens what it names. **Tasks open as a page**, the **Inbox keeps the selected task beside the list**, **Filters become Views** with display options, **All projects is a table** that says which project needs a look, and quick add and <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd> share one palette. The assistant, Settings, boards, the timeline, the review screens and the phone layout follow the same look, and larger text sizes no longer break the layout. Also new: **delivery channels** (ntfy, Pushover, Gotify, a signed webhook), a **filter builder** that needs no query syntax, and a **Claude Code plugin** for your own server.

@@ -85,7 +85,7 @@ function NoClose({ children }: { children: ReactNode }) {
 function Items({ groups, onPicker, onStep, onConfirm }: {
   groups: ActionGroup[]
   // `any`: a menu mixes pickers of different item types.
-  onPicker: (p: PickerSpec<any>) => void
+  onPicker: (id: string, p: PickerSpec<any>) => void
   onStep: (s: StepSpec) => void
   onConfirm: (c: ConfirmSpec) => void
 }) {
@@ -107,7 +107,7 @@ function Items({ groups, onPicker, onStep, onConfirm }: {
                 case 'check':
                   return <MenuItem key={item.id} {...common} checked={item.checked} onSelect={() => void item.onSelect()} />
                 case 'picker':
-                  return <NoClose key={item.id}><MenuItem {...common} label={`${item.label}…`} onSelect={() => onPicker(item.picker)} /></NoClose>
+                  return <NoClose key={item.id}><MenuItem {...common} label={`${item.label}…`} onSelect={() => onPicker(item.id, item.picker)} /></NoClose>
                 case 'confirm':
                   return <NoClose key={item.id}><MenuItem {...common} label={`${item.label}…`} onSelect={() => { close?.(); onConfirm(item.confirm) }} /></NoClose>
                 case 'step':
@@ -201,7 +201,7 @@ export function ActionMenu({ label, title, groups, header, trigger, triggerClass
   const [ownOpen, setOwnOpen] = useState(false)
   const open = openProp ?? ownOpen
   // `any`: a menu mixes pickers of different item types.
-  const [picker, setPicker] = useState<PickerSpec<any> | null>(null)
+  const [picker, setPicker] = useState<{ id: string; spec: PickerSpec<any> } | null>(null)
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null)
   const [step, setStep] = useState<StepSpec | null>(null)
   const setOpen = (v: boolean) => {
@@ -212,10 +212,13 @@ export function ActionMenu({ label, title, groups, header, trigger, triggerClass
   useEffect(() => {
     if (!open || !startPicker) return
     const item = groups.flatMap((g) => g.items).find((i) => i.kind === 'picker' && i.id === startPicker && !i.disabled)
-    if (item && item.kind === 'picker') setPicker(item.picker)
+    if (item && item.kind === 'picker') setPicker({ id: item.id, spec: item.picker })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the menu opens with a requested picker; groups is rebuilt every render
   }, [open, startPicker])
-  const current = picker
+  // The open picker follows the menu's groups, so marks read after it opened (the bulk
+  // labels' common set) and after each pick show; the spec it opened with is the fallback.
+  const live = picker ? groups.flatMap((g) => g.items).find((i) => i.kind === 'picker' && i.id === picker.id) : undefined
+  const current = live?.kind === 'picker' ? live.picker : picker?.spec ?? null
   return (
     <>
       <Menu label={label} title={title} kind={current || step ? 'dialog' : 'menu'} align={align} width={width} className="p-1"
@@ -233,7 +236,7 @@ export function ActionMenu({ label, title, groups, header, trigger, triggerClass
           ? <PickerStep picker={current} onBack={() => setPicker(null)} onDone={() => { setPicker(null); setOpen(false) }} onConfirm={setConfirm} />
           : step
             ? <StepFrame step={step} onBack={() => setStep(null)} onDone={() => { setStep(null); setOpen(false) }} />
-            : <>{header}{header && <MenuSeparator />}<Items groups={groups} onPicker={setPicker} onStep={setStep} onConfirm={setConfirm} /></>}
+            : <>{header}{header && <MenuSeparator />}<Items groups={groups} onPicker={(id, spec) => setPicker({ id, spec })} onStep={setStep} onConfirm={setConfirm} /></>}
       </Menu>
       {confirm && <Confirmation spec={confirm} onClose={() => setConfirm(null)} />}
     </>

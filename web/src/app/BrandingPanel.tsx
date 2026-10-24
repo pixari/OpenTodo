@@ -55,7 +55,7 @@ export function BrandingView({ value, online, busy, error, saved, onSaveName, on
       {!online && <div className="pb-3"><Notice>{noticeCopy('branding', 'offline')}</Notice></div>}
       <SettingRow {...rowCopy('branding', 'name')} htmlFor="branding-name"
         control={<form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (dirty && !tooLong) onSaveName(name.trim()) }}>
-          <Input id="branding-name" className="w-56" value={name} placeholder="OpenTodo" maxLength={NAME_MAX + 10} disabled={disabled}
+          <Input id="branding-name" className="w-56 max-w-full" value={name} placeholder="OpenTodo" maxLength={NAME_MAX + 10} disabled={disabled}
             onChange={(e) => setName(e.target.value)} autoComplete="off" />
           <Button type="submit" variant="primary" size="sm" disabled={disabled || !dirty || tooLong} busy={busy}>{t('Save')}</Button>
         </form>} />

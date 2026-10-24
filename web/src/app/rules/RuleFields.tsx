@@ -25,7 +25,7 @@ const STATE_LABEL = translatedMap({ complete: msg('Complete'), reopen: msg('Reop
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const
 const WEEKDAY_SHORT = translatedMap<string>({ 1: msg('Mon'), 2: msg('Tue'), 3: msg('Wed'), 4: msg('Thu'), 5: msg('Fri'), 6: msg('Sat'), 7: msg('Sun') })
 
-const row = 'flex items-center justify-between gap-3 text-body'
+const row = 'flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-body'
 
 interface Names { labels: readonly Label[]; projects: readonly Project[]; sections: readonly Section[] }
 
@@ -66,7 +66,7 @@ export function TriggerFields({ value, onChange, names, sharedProjects }: { valu
       <legend className="text-meta font-medium text-muted">{t('When')}</legend>
       <label className={row}>
         <span>{t('Trigger')}</span>
-        <select className="ui-input w-56" value={value.kind} onChange={(e) => setKind(e.target.value as RuleTriggerKind)}>
+        <select className="ui-input w-56 max-w-full" value={value.kind} onChange={(e) => setKind(e.target.value as RuleTriggerKind)}>
           {RULE_TRIGGERS.map((k) => <option key={k} value={k}>{TRIGGER_LABEL[k]}</option>)}
         </select>
       </label>

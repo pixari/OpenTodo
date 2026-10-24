@@ -81,7 +81,8 @@ layout-check: build
 ## Interface audit (ux-audit-three-widths): every screen of scripts/ux-audit/screens.json
 ## at 360/768/1280 px, light and dark, English and German, against a throwaway server
 ## on a free port; writes ux-audit-report/index.html and report.json. Needs Playwright
-## with Chromium. ONLY, WIDTHS, THEMES, LANGS, CONCURRENCY, OUT_DIR narrow it;
+## with Chromium. ONLY, WIDTHS, THEMES, LANGS, CONCURRENCY, OUT_DIR narrow it, TEXT_SIZE=20
+## (or 24) sets the browser's text size;
 ## UX_AUDIT_STRICT=1 fails on budget, overflow and story-coverage findings.
 ux-audit: build
 	node scripts/ux-audit/tour.mjs

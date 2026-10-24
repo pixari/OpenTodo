@@ -122,7 +122,8 @@ export function usePhoneListActions({ route, userRole, rowCount, topLevelCount, 
       {ask && <TodayAskAction role={userRole} />}
       {process && (
         <Button variant="secondary" size="sm" icon="inbox" onClick={() => navigate({ view: 'triage' })} data-triage-start>
-          {t.rich('Process {count}', { count: <span className="tabular-nums text-muted">{topLevelCount}</span> })}
+          {/* As on the desktop header: a phone with a large text size keeps the icon, so the title fits. */}
+          <span className="max-[21rem]:sr-only">{t.rich('Process {count}', { count: <span className="tabular-nums text-muted">{topLevelCount}</span> })}</span>
         </Button>
       )}
       {filterSlot && <DurationFilterControl active={duration} onChange={onDuration} />}

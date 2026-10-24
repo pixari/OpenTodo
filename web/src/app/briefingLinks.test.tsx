@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, useDatabase } from '../lib/db'
 import { setDateTime } from '../lib/dates'
 import { createTask, resetDeviceId } from '../lib/ops'
-import { click, flush, render, waitFor } from '../ui/test-utils'
+import { click, flush, key, render, waitFor } from '../ui/test-utils'
+import { BriefingSection } from './PreferencesPanels'
 import { openNotifications } from './briefingLinks'
 import { resetPanel } from './panel'
 import { navigate } from './router'
@@ -48,6 +49,11 @@ describe('briefing links (2.1)', () => {
     await waitFor(() => r.container.querySelectorAll('[data-ticked]').length === 2)
     expect([...r.container.querySelectorAll('[data-ticked]')].map((e) => e.closest('[data-task-id]')!.getAttribute('data-task-id')).sort()).toEqual([a, b].sort())
     expect(await db.outbox.count()).toBe(outbox)
+    // A selection, not a passing highlight (precision-polish-2): the bar offers its actions and Escape clears it.
+    await waitFor(() => r.container.querySelector('[data-selection-bar] [role="status"]')?.textContent === '2 selected')
+    expect(r.container.querySelector('[data-selection-bar]')!.textContent).toContain('Actions')
+    await key(document.body, 'Escape')
+    await waitFor(() => !r.container.querySelector('[data-selection-bar]') && r.container.querySelectorAll('[data-ticked]').length === 0)
     await r.unmount()
   })
 
@@ -93,6 +99,25 @@ describe('hide the briefing (2.3)', () => {
     await waitFor(() => document.querySelector('[data-briefing-toggle]')?.textContent?.includes('Show briefing') === true)
     await click(document.querySelector('[data-briefing-toggle]')!)
     await waitFor(() => !!briefing(r.container))
+    await r.unmount()
+  })
+})
+
+describe('Settings → General → Briefing (precision-polish-2)', () => {
+  it('the switch and the day pages\' menu are one synced preference', async () => {
+    await createTask({ title: 'Write the report', due: { date: '2026-10-22' } })
+    navigate({ view: 'today' })
+    const r = await render(<><BriefingSection /><TaskListView route={{ view: 'today' }} /></>)
+    const sw = () => r.container.querySelector<HTMLButtonElement>('#briefing-show-switch')!
+    await waitFor(() => !!briefing(r.container))
+    expect(sw().getAttribute('aria-checked')).toBe('true')
+    await click(sw())
+    await waitFor(() => !briefing(r.container) && sw().getAttribute('aria-checked') === 'false')
+    expect((await db.outbox.toArray()).filter((o) => o.entity === 'user_prefs').map((o) => [o.field, o.value])).toEqual([['briefing', 'hidden']])
+    await click(r.container.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!)
+    await waitFor(() => document.querySelector('[data-briefing-toggle]')?.textContent?.includes('Show briefing') === true)
+    await click(document.querySelector('[data-briefing-toggle]')!)
+    await waitFor(() => !!briefing(r.container) && sw().getAttribute('aria-checked') === 'true')
     await r.unmount()
   })
 })

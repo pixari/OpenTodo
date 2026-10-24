@@ -94,7 +94,7 @@ async function seedReview() {
 /** The tile states (surfaces-v2 D10): up, down, the same, and "–" with its reason, at the display step. */
 export const StatisticsTileStates: StoryObj = {
   render: () => (
-    <dl className="grid grid-cols-1 gap-3 min-[340px]:grid-cols-2 lg:grid-cols-4">
+    <dl className="grid grid-cols-1 gap-3 min-[21.25rem]:grid-cols-2 lg:grid-cols-4">
       <StatTile testId="up" label="Done" value="42" change={{ text: '+12 % vs last week', direction: 'up' }} note="including each day of a recurring task" />
       <StatTile testId="down" label="Tracked" value="6h 30m" change={{ text: '−1h 15m vs last week', direction: 'down' }} note="against 8h estimated" />
       <StatTile testId="same" label="On time" value="80 %" change={{ text: 'same as last week', direction: 'same' }} note="of 10 tasks with a due date" />

@@ -94,7 +94,7 @@ export function Spotlight({ delay = SPOTLIGHT_DELAY_MS }: { delay?: number }) {
           {groups.map((g) => (
             <section key={g.id} aria-label={g.title}>
               <h3 className="mb-1 text-hint font-semibold uppercase tracking-wide text-faint">{g.title}</h3>
-              <ul className="grid grid-cols-1 gap-x-3 min-[400px]:grid-cols-2">
+              <ul className="grid grid-cols-1 gap-x-3 min-[25rem]:grid-cols-2">
                 {g.items.map((c) => (
                   <li key={c.entry.id}>
                     <button type="button" className="flex min-h-8 w-full items-center gap-2 rounded-control px-1.5 text-left text-body hover:bg-sunken focus-visible:outline-2 focus-visible:outline-focus dark:hover:bg-raised"

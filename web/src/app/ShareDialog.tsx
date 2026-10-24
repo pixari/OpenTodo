@@ -95,7 +95,7 @@ export function ShareDialog({ project, userId, cached, section, onPublicLinks, o
         {directory && roles.length > 0 && <ShareDirectory projectId={project.id} workspace={directory} membership={membership} roles={roles} busy={busy} run={(a) => void run(a)} />}
         {!directory && roles.length > 0 && (
           <form onSubmit={share} className="mb-4 flex flex-wrap gap-2">
-            <input ref={emailRef} autoFocus type="email" className="ui-input min-w-0 flex-1" placeholder={t('Email of an account on this server')}
+            <input ref={emailRef} autoFocus type="email" className="ui-input min-w-0 flex-[1_1_14rem]" placeholder={t('Email of an account on this server')}
               aria-label={t('Email')} value={email} onChange={(e) => setEmail(e.target.value)} />
             <select className="ui-input w-auto" aria-label={t('Role')} value={role} onChange={(e) => setRole(e.target.value as ProjectRole)}>
               {roles.map((r) => <option key={r} value={r}>{r}</option>)}

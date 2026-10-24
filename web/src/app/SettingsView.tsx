@@ -35,7 +35,7 @@ import { CalendarFeedsPanel } from './CalendarFeedsPanel'
 import { IssuesPanel } from './IssuesPanel'
 import { ConfigWarningsNotice } from './ConfigWarnings'
 import { EmailInboxPanel } from './EmailInboxPanel'
-import { FocusSection, KeyboardSection, LanguageSection, StartViewSection } from './PreferencesPanels'
+import { BriefingSection, FocusSection, KeyboardSection, LanguageSection, StartViewSection } from './PreferencesPanels'
 import { AutoArchiveSection } from './ProjectsSettings'
 import { CaptureSection } from './CaptureSettings'
 import { AttachmentSettingsPanel } from './AttachmentSettingsPanel'
@@ -285,9 +285,11 @@ function ResultLink({ section, onOpen }: { section: SettingsSection; onOpen: () 
 /** Who is signed in: avatar initials, name, email and role (the list and Account). */
 export function ProfileCard({ user, compact = false }: { user: User; compact?: boolean }) {
   return (
-    <div id="profile" className={`flex items-center gap-3 rounded-card border border-default bg-surface ${compact ? 'p-3' : 'gap-4 p-4'} shadow-1`} data-profile-card>{/* surface-lint-allow: the profile card above the list */}
+    <div id="profile" className={`flex flex-wrap items-center gap-3 rounded-card border border-default bg-surface ${compact ? 'p-3' : 'gap-4 p-4'} shadow-1`} data-profile-card>{/* surface-lint-allow: the profile card above the list */}
       <PersonAvatar id={user.id} name={user.name || user.email} size={compact ? 'md' : 'lg'} />
-      <div className="min-w-0 flex-1">
+      {/* The role wraps under the card when the name needs the width (a phone with a large
+          text size, precision-polish-2), so the name is not cut to a letter. */}
+      <div className="min-w-0 flex-[1_1_8rem]">
         <p className="user-text truncate text-body font-semibold text-default">{user.name || user.email}</p>
         <TruncatedText as="p" className="user-text text-meta text-muted" text={user.email} />
       </div>
@@ -339,6 +341,7 @@ function SectionContent({ section, user, onLogout }: { section: SettingsSection;
         <>
           <LanguageSection />
           <StartViewSection />
+          <BriefingSection />
           <DateTimeSection />
           <CalendarSettingsSection />
           <KeyboardSection />

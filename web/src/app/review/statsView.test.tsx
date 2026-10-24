@@ -136,7 +136,7 @@ describe('Statistics dashboard', () => {
     const r = await render(<StatsContent tasks={[]} projects={[]} memberships={[]} me="u1" today="2026-10-14" weekStart={1} period="this-week" />)
     const tiles = r.container.querySelector('[data-testid="stats-tiles"]')!.className
     expect(tiles).toMatch(/\bgrid-cols-1\b/)
-    expect(tiles).toMatch(/min-\[340px\]:grid-cols-2/)
+    expect(tiles).toMatch(/min-\[21.25rem\]:grid-cols-2/)
     expect(tiles).toMatch(/\blg:grid-cols-4\b/)
     expect(r.container.querySelector('[data-testid="stats-panels"]')!.className).toMatch(/\bgrid-cols-1 .*lg:grid-cols-2/)
     const heatmap = r.container.querySelector('[data-heatmap]')!

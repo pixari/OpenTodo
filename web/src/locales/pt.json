@@ -5257,5 +5257,8 @@
   "{enter} applies, {esc} discards. Each change shows in its task’s history.": "{enter} aplica, {esc} descarta. Cada mudança aparece no histórico da sua tarefa.",
   "{n, plural, one {# selected task} other {# selected tasks}}": "{n, plural, one {# tarefa selecionada} other {# tarefas selecionadas}}",
   "{n, plural, one {Apply # change} other {Apply # changes}}": "{n, plural, one {Aplicar # mudança} other {Aplicar # mudanças}}",
-  "More properties": "Mais propriedades"
+  "More properties": "Mais propriedades",
+  "Briefing": "Resumo",
+  "Show the briefing": "Mostrar o resumo",
+  "The sentence under the title of Today and Upcoming. On all your devices.": "A frase sob o título de Hoje e Em breve. Em todos os seus dispositivos."
 }
