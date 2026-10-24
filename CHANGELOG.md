@@ -7,6 +7,7 @@ All notable changes to OpenTodo are documented here. The format follows [Keep a 
 ### Added
 
 - **Shell completion for `ot`.** `ot completion bash`, `ot completion zsh` or `ot completion fish` prints a script; install it once and Tab completes commands, flags and fixed values, plus project, label and workspace names, open task ids with their titles, and `#project` and `@label` in `ot add`, read from your profile's server. Offline it still completes commands and flags and prints nothing into your prompt. ([Shell completion](docs/cli.md#shell-completion))
+- **The assistant on encrypted accounts, from your own device.** The server cannot read an end-to-end encrypted account, so it never runs the assistant for one. When the owner turns on **Let encrypted accounts use the assistant from their own device** (off by default), the panel sets the assistant up on this device instead: you choose a provider the owner allows (Anthropic, OpenAI, Google Gemini or a model server such as Ollama at an address the owner listed), a model and your own key, which stays in this browser and is deleted at sign-out. Your device reads its own decrypted tasks and calls the provider directly; the server sees no content and no key, and usage is not reported. Proposals, review, undo and skills work as before. The page's Content-Security-Policy lets the app reach exactly the providers the owner allowed. ([Assistant on encrypted accounts](docs/assistant-encrypted.md))
 
 ## [0.11.0] - 2026-10-24
 

@@ -118,6 +118,8 @@ func (s *Server) ownerView(ctx context.Context) (map[string]any, error) {
 		"own_key_members":        ownKeyMembers,
 		"anthropic_models":       assistant.AnthropicModels,
 		"default_model":          assistant.DefaultAnthropicModel,
+		"device":                 set.Device,
+		"device_origins":         assistant.ProviderOrigins,
 	}, nil
 }
 
@@ -173,6 +175,7 @@ func (s *Server) handlePutAssistantSettings(w http.ResponseWriter, r *http.Reque
 		s.internal(w, err)
 		return
 	}
+	s.forgetCSP()
 	v, err := s.ownerView(r.Context())
 	if err != nil {
 		s.internal(w, err)
@@ -233,13 +236,19 @@ func (s *Server) myAssistant(ctx context.Context, u *auth.User) (map[string]any,
 		return nil, err
 	}
 	reason := ""
+	mode := "server"
 	switch {
 	case !set.Enabled:
 		reason = "disabled"
+	case encrypted && set.DeviceActive():
+		mode = "device"
 	case !set.Active():
 		reason = "no_provider"
 	case encrypted:
 		reason = "encryption_enabled"
+	}
+	if reason != "" {
+		mode = ""
 	}
 	p := set.Providers[set.DefaultProvider]
 	source := "server"
@@ -250,7 +259,7 @@ func (s *Server) myAssistant(ctx context.Context, u *auth.User) (map[string]any,
 	// member's own provider when it is in effect): the disclosure and the
 	// consent are about that provider (assistant-member-provider).
 	out := map[string]any{
-		"available": reason == "", "enabled": set.Active(), "reason": reason,
+		"available": reason == "", "enabled": set.Active() || mode == "device", "reason": reason, "mode": mode,
 		"provider": route.Provider, "provider_label": assistant.ProviderLabel(route.Provider), "model": route.Model,
 		"source": source, "own_key_in_use": route.Own,
 		"server_provider": set.DefaultProvider, "server_provider_label": assistant.ProviderLabel(set.DefaultProvider), "server_model": p.Model,
@@ -267,6 +276,9 @@ func (s *Server) myAssistant(ctx context.Context, u *auth.User) (map[string]any,
 	}
 	if consent != nil {
 		out["consent"] = consent
+	}
+	if encrypted {
+		out["device"] = deviceView(set, consent)
 	}
 	return out, nil
 }
@@ -297,6 +309,15 @@ func (s *Server) handlePutMyAssistant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	set := s.assistantSettings(ctx)
+	if strings.HasPrefix(in.Provider, assistant.DeviceConsentPrefix) {
+		// Consent for the on-device assistant (assistant-on-device D6).
+		if in.Consent == nil || in.OwnKey != nil || in.OwnProvider != nil || in.OwnModel != nil {
+			writeError(w, http.StatusBadRequest, "invalid_input", "a device provider takes consent only")
+			return
+		}
+		s.putDeviceConsent(w, r, set, strings.TrimPrefix(in.Provider, assistant.DeviceConsentPrefix), *in.Consent)
+		return
+	}
 	if in.Consent == nil && in.OwnKey == nil && in.OwnProvider == nil && in.OwnModel == nil {
 		writeError(w, http.StatusBadRequest, "invalid_input", "consent: true or false, own_key, own_provider or own_model is required")
 		return
@@ -510,16 +531,21 @@ type turnRequest struct {
 func (s *Server) handleAssistantTurn(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	set := s.assistantSettings(ctx)
-	if !set.Active() {
+	if !set.Enabled {
 		writeError(w, http.StatusNotFound, "not_found", "the assistant is not enabled on this server")
 		return
 	}
 	u := userFrom(ctx)
+	// Never for an encrypted account, on-device mode or not (assistant-on-device).
 	if enc, err := s.keys().Enabled(ctx, u.ID); err != nil {
 		s.internal(w, err)
 		return
 	} else if enc {
 		writeError(w, http.StatusConflict, "encryption_enabled", "the assistant cannot read end-to-end encrypted tasks; your tasks never leave your devices unencrypted")
+		return
+	}
+	if !set.Active() {
+		writeError(w, http.StatusNotFound, "not_found", "the assistant is not enabled on this server")
 		return
 	}
 	// The member's own provider, model and key, or the owner's provider

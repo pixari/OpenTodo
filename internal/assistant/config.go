@@ -81,6 +81,9 @@ type Settings struct {
 	// CapMemberKeys counts turns on a member's own key against the monthly
 	// cap (assistant-member-provider). Off by default: the member pays.
 	CapMemberKeys bool `json:"cap_member_keys"`
+	// Device is the on-device assistant for encrypted accounts
+	// (assistant-on-device D2).
+	Device DeviceSettings `json:"device"`
 }
 
 // Defaults is the configuration of a fresh server: off.
@@ -111,11 +114,18 @@ func (s *Settings) normalise() {
 	if s.DefaultProvider == "" {
 		s.DefaultProvider = Anthropic
 	}
+	s.Device.normalise()
 }
 
 // Active reports whether turns can run at all: enabled with an enabled default provider.
 func (s Settings) Active() bool {
 	return s.Enabled && s.Providers[s.DefaultProvider].Enabled
+}
+
+// DeviceActive reports whether the on-device assistant is offered to
+// encrypted accounts: the main switch, the device switch and a provider.
+func (s Settings) DeviceActive() bool {
+	return s.Enabled && s.Device.Enabled && len(s.Device.Providers) > 0
 }
 
 // ProviderLabel is the name shown in the disclosure.
@@ -174,7 +184,12 @@ func (s Settings) validateStatic() error {
 			return err
 		}
 	}
-	if s.Enabled && !s.Providers[s.DefaultProvider].Enabled {
+	if err := s.Device.validate(); err != nil {
+		return err
+	}
+	// An owner whose people all use encryption needs no server provider when
+	// devices may call providers themselves (assistant-on-device D2).
+	if s.Enabled && !s.Providers[s.DefaultProvider].Enabled && !s.Device.Enabled {
 		return invalid("default_provider", "the default provider must be enabled")
 	}
 	return nil
@@ -353,6 +368,9 @@ func diffSettings(a, b Settings) [][3]string {
 	add("assistant.monthly_token_cap_per_user", fmt.Sprint(a.MonthlyTokenCap), fmt.Sprint(b.MonthlyTokenCap))
 	add("assistant.allow_private_endpoint", fmt.Sprint(a.AllowPrivateEndpoint), fmt.Sprint(b.AllowPrivateEndpoint))
 	add("assistant.cap_member_keys", fmt.Sprint(a.CapMemberKeys), fmt.Sprint(b.CapMemberKeys))
+	add("assistant.device.enabled", fmt.Sprint(a.Device.Enabled), fmt.Sprint(b.Device.Enabled))
+	add("assistant.device.providers", strings.Join(a.Device.Providers, ","), strings.Join(b.Device.Providers, ","))
+	add("assistant.device.origins", strings.Join(a.Device.Origins, ","), strings.Join(b.Device.Origins, ","))
 	for _, n := range ProviderNames {
 		pa, pb := a.Providers[n], b.Providers[n]
 		add("assistant."+n+".enabled", fmt.Sprint(pa.Enabled), fmt.Sprint(pb.Enabled))

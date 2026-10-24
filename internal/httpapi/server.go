@@ -186,6 +186,8 @@ type Server struct {
 	assistantSetup func(*assistant.Service)
 	// assistantTestLimiter limits members' own connection tests (assistant-member-provider).
 	assistantTestLimiter *rateLimiter
+	// csp caches the page's Content-Security-Policy (assistant-on-device D3).
+	csp cspCache
 	// idemSalt makes Idempotency-Key ids unguessable (agent-ready-cli D5);
 	// see idempotency.go.
 	idemSalt string

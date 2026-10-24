@@ -476,6 +476,9 @@ export function describeStreamError(code: string, message: string): string {
     case 'provider_auth': return t('The model provider rejected the API key. The server owner can check it in Settings → Integrations → Assistant.')
     case 'provider_rate_limited': return t('The model provider is rate limiting requests. Try again in a moment.')
     case 'timeout': return t('The answer took too long and was stopped.')
+    // On-device turns (assistant-on-device D9).
+    case 'device_auth': return t('The provider rejected the API key saved on this device. Change it with “Change provider or key” or in Settings → Integrations → Assistant.')
+    case 'device_blocked': return t('This page could not reach the provider. If the server owner allowed it a moment ago, reload the page. A model server must also allow requests from this app’s address.')
   }
   return message ? message.charAt(0).toUpperCase() + message.slice(1) + '.' : t('The model provider could not answer.')
 }

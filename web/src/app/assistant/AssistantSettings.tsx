@@ -19,6 +19,7 @@ import { Checkbox, Switch } from '../../ui'
 import { formatDate } from '../../lib/dates'
 import { useDateTimeFormat } from '../DateTimePrefsProvider'
 import { EncryptionOffHint } from './AssistantPanel'
+import { deviceDraftFrom, deviceInputFrom, DeviceUserRows, OwnerDeviceGroup, type OwnerDeviceDraft } from './AssistantDevice'
 import { t, msg, translatedMap } from '../../lib/i18n'
 import { cardCopy, noticeCopy, rowCopy } from '../../lib/settingsCopy'
 
@@ -36,13 +37,16 @@ export interface OwnerDraft {
   allow_private_endpoint: boolean
   monthly_token_cap_per_user: number
   cap_member_keys: boolean
+  /** The on-device assistant for encrypted accounts (assistant-on-device). */
+  device: OwnerDeviceDraft
 }
 
 export function draftFrom(s: AssistantOwnerSettings): OwnerDraft {
   const providers = {} as OwnerDraft['providers']
   for (const p of PROVIDERS) providers[p] = { enabled: s.providers[p]?.enabled ?? false, model: s.providers[p]?.model ?? '', base_url: s.providers[p]?.base_url ?? '' }
   return { enabled: s.enabled, default_provider: s.default_provider, providers, keys: {}, allow_member_keys: s.allow_member_keys,
-    allow_private_endpoint: s.allow_private_endpoint, monthly_token_cap_per_user: s.monthly_token_cap_per_user, cap_member_keys: !!s.cap_member_keys }
+    allow_private_endpoint: s.allow_private_endpoint, monthly_token_cap_per_user: s.monthly_token_cap_per_user, cap_member_keys: !!s.cap_member_keys,
+    device: deviceDraftFrom(s.device) }
 }
 
 export function inputFrom(d: OwnerDraft): AssistantSettingsInput {
@@ -54,7 +58,8 @@ export function inputFrom(d: OwnerDraft): AssistantSettingsInput {
   const keys: AssistantSettingsInput['keys'] = {}
   for (const [k, v] of Object.entries(d.keys)) if (v !== undefined) keys[k as ProviderName] = v
   return { enabled: d.enabled, default_provider: d.default_provider, providers, keys, allow_member_keys: d.allow_member_keys,
-    allow_private_endpoint: d.allow_private_endpoint, monthly_token_cap_per_user: d.monthly_token_cap_per_user, cap_member_keys: d.cap_member_keys }
+    allow_private_endpoint: d.allow_private_endpoint, monthly_token_cap_per_user: d.monthly_token_cap_per_user, cap_member_keys: d.cap_member_keys,
+    device: deviceInputFrom(d.device) }
 }
 
 /** The on-screen values "Test connection" sends for one provider (assistant-test-unsaved-settings). */
@@ -122,6 +127,7 @@ export function assistantStatusLine(s: AssistantStatus | null): string | null {
   if (!s) return null
   if (!s.enabled) return t('Off: the owner has not turned it on')
   if (s.reason === 'encryption_enabled') return t('Off for your account: end-to-end encryption is on')
+  if (s.mode === 'device') return t('On for your account, from your own device')
   return s.source === 'own' ? t('On, using your own key') : t('On for everyone')
 }
 
@@ -216,6 +222,7 @@ export function OwnerAssistantSettings(p: OwnerViewProps & { onCancel?: () => vo
         <p className="text-meta text-muted" data-own-key-members>{t('{n, plural, one {# person uses their own provider and key.} other {# people use their own provider and key.}}', { n: p.saved.own_key_members })}</p>
       )}
       </FormGroup>
+      <OwnerDeviceGroup draft={d.device} off={off} onChange={(device) => set({ device })} apiOrigins={p.saved.device_origins ?? {}} />
       {p.error && <Notice tone="danger">{p.error}</Notice>}
       {p.message && <Notice tone="success">{p.message}</Notice>}
       <div className="flex justify-end gap-2">
@@ -267,6 +274,10 @@ export function OwnerAssistantSummary({ saved, connected, onConfigure }: OwnerSu
             typeof saved.own_key_members === 'number' ? t('{n, plural, one {# person uses their own} other {# people use their own}}', { n: saved.own_key_members }) : '',
           ].filter(Boolean).join(' · ') + '.'
           : t('Not allowed.')} />
+      <SettingRow {...rowCopy('assistant-settings', 'device')}
+        status={saved.device?.enabled && saved.device.providers.length
+          ? t('On their own device: {providers}.', { providers: saved.device.providers.map((n) => SHORT[n]).join(', ') })
+          : t('Off: the assistant is not available to encrypted accounts.')} />
     </div>
   )
 }
@@ -457,6 +468,25 @@ export function UserAssistantSettings(p: UserViewProps) {
   if (!s) return null
   if (s.reason === 'encryption_enabled') return <div className="py-3"><Notice>{noticeCopy('assistant-settings', 'encrypted')}{' '}<EncryptionOffHint /></Notice></div>
   if (!s.enabled) return <div className="py-3"><Notice>{noticeCopy('assistant-settings', 'ownerOff')}</Notice></div>
+  const commonRows = (
+    <>
+      <SettingRow {...rowCopy('assistant-settings', 'auto')}
+        control={<Switch checked={p.autoApply} onChange={p.onAutoApply} label={t('Apply small changes without review (this device)')} hideLabel />} />
+      <SettingRow {...rowCopy('assistant-settings', 'conversations')}
+        status={p.cleared ? <span role="status" className="text-muted">{t('Cleared.')}</span> : undefined}
+        control={<Button size="sm" variant="danger" onClick={p.onClear}>{t('Clear conversations on this device')}</Button>} />
+      {p.error && <div className="py-3"><Notice tone="danger">{p.error}</Notice></div>}
+    </>
+  )
+  // An encrypted account runs the assistant on its own device (assistant-on-device).
+  if (s.mode === 'device') {
+    return (
+      <div className="divide-y divide-(--ot-border)" data-assistant-user data-assistant-device>
+        <DeviceUserRows status={s} connected={p.connected} onWithdraw={p.onWithdraw} />
+        {commonRows}
+      </div>
+    )
+  }
   const ownSupported = s.source !== undefined
   const keptChoice = !s.allow_member_keys && s.own_provider
   return (
@@ -481,12 +511,7 @@ export function UserAssistantSettings(p: UserViewProps) {
           </Notice>
         </div>
       )}
-      <SettingRow {...rowCopy('assistant-settings', 'auto')}
-        control={<Switch checked={p.autoApply} onChange={p.onAutoApply} label={t('Apply small changes without review (this device)')} hideLabel />} />
-      <SettingRow {...rowCopy('assistant-settings', 'conversations')}
-        status={p.cleared ? <span role="status" className="text-muted">{t('Cleared.')}</span> : undefined}
-        control={<Button size="sm" variant="danger" onClick={p.onClear}>{t('Clear conversations on this device')}</Button>} />
-      {p.error && <div className="py-3"><Notice tone="danger">{p.error}</Notice></div>}
+      {commonRows}
     </div>
   )
 }

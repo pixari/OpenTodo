@@ -1,6 +1,6 @@
 ---
 title: What the assistant sends and keeps
-summary: What is sent to the model provider and when you agree to it, where conversations live, how tokens are counted, and why encrypted accounts have no assistant.
+summary: What is sent to the model provider and when you agree to it, where conversations live, how tokens are counted, and how encrypted accounts use the assistant on their own device.
 audience: user
 section: Guides
 specs: []
@@ -36,7 +36,11 @@ Answers on your own key are paid by you, so they do not count toward the allowan
 
 ## End-to-end encrypted accounts
 
-If your account uses [end-to-end encryption](e2ee.md), the assistant is not available: the server holds no key to your tasks, so it cannot pass them to a model, and relaying them in plain text would break what encryption promises. The panel explains this, offers no consent step, and links to **Settings → Account → Encryption**, where you can turn encryption off if you want to use the assistant (your tasks are then stored without end-to-end encryption).
+If your account uses [end-to-end encryption](e2ee.md), the server never runs the assistant for you: it holds no key to your tasks, and relaying them in plain text through the server would break what encryption promises.
+
+When the server owner allows it, the assistant runs [on your device](assistant-encrypted.md) instead. Your device sends what you type and the task data a question needs directly to the provider you set up there, with your own key; the OpenTodo server receives only your consent (which provider you accepted, not the key, the model or the address) and nothing of the conversation. The key is kept in this browser only and deleted at sign-out. Usage is shown on the device and never reported.
+
+When the owner does not allow it, the panel explains that the assistant cannot read encrypted tasks, offers no consent step, and links to **Settings → Account → Encryption**, where you can turn encryption off if you want to use the server's assistant (your tasks are then stored without end-to-end encryption).
 
 ## Demo instance
 

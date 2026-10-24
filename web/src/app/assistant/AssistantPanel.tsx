@@ -69,8 +69,10 @@ export interface AssistantPanelProps extends ConversationOptions {
 }
 
 export function AssistantPanel({ onClose, context, onApplied, name = '' }: AssistantPanelProps) {
-  const connected = useOnline()
-  const c = useAssistantConversation({ context, onApplied })
+  const online = useOnline()
+  const c = useAssistantConversation({ context, onApplied, userName: name })
+  // A device turn needs no connection to this server: a model server on the same computer answers offline (assistant-on-device).
+  const connected = online || c.status?.mode === 'device'
   const { status, composer, review: rv, streaming } = c
   // A project kept away from assistants replaces the view hint (agent-planning-fields D9).
   const excluded = useAgentExclusions()
@@ -103,12 +105,12 @@ export function AssistantPanel({ onClose, context, onApplied, name = '' }: Assis
           </div>
         </div>
       )}>
-      <AssistantPanelBody status={status} connected={connected} messages={c.thread?.messages ?? []} streaming={streaming} announce={c.live.announce}
+      <AssistantPanelBody status={status} connected={online} messages={c.thread?.messages ?? []} streaming={streaming} announce={c.live.announce}
         statusAnnounce={c.statusAnnounce} review={rv.review} result={rv.result} reviewBusy={rv.reviewBusy} error={c.error} draft={composer.draft}
         consentBusy={c.consent.consentBusy} consentError={c.consent.consentError} threads={c.threads} reviewRef={rv.reviewRef}
         onToggle={rv.toggle} onApply={() => void rv.apply()} onDiscard={() => void rv.discard()} onUndo={() => void rv.undo()} onDraft={composer.setDraft} onSend={() => void c.send()}
         onStop={c.stop} onAccept={(k) => void c.consent.accept(k)} onPickThread={c.pickThread}
-        name={name} skills={composer.skills} onStarter={(s) => { composer.chooseSkill(s); focusComposer() }} layout="sheet" />
+        name={name} skills={composer.skills} onStarter={(s) => { composer.chooseSkill(s); focusComposer() }} layout="sheet" device={c.device} />
     </AssistantSheet>
   )
 }
