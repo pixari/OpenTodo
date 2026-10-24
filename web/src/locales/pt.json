@@ -500,7 +500,6 @@
   "Collapse or expand the sidebar (from 1024 px)": "Recolher ou expandir a barra lateral (a partir de 1024 px)",
   "Collapse sidebar": "Recolher a barra lateral",
   "Collapse subtasks": "Recolher subtarefas",
-  "Collapse the subtasks of the selected task (or go to its parent), or the sub-projects of the focused sidebar project": "Recolher as subtarefas da tarefa selecionada (ou ir para a tarefa pai), ou os subprojetos do projeto em foco na barra lateral",
   "Collapse {name}": "Recolher {name}",
   "Collection URL": "URL da coleção",
   "Colour": "Cor",
@@ -1031,7 +1030,6 @@
   "Expand all": "Expandir tudo",
   "Expand sidebar": "Expandir a barra lateral",
   "Expand subtasks": "Expandir subtarefas",
-  "Expand the subtasks of the selected task, or the sub-projects of the focused sidebar project": "Expandir as subtarefas da tarefa selecionada ou os subprojetos do projeto em foco na barra lateral",
   "Expand {name}": "Expandir {name}",
   "Expected \"&\" or \"|\" before \"{before}\" at position {pos}": "Esperado “&” ou “|” antes de “{before}”, na posição {pos}",
   "Expected \"&\", \"|\" or \")\" before \"{before}\" at position {pos}": "Esperado “&”, “|” ou “)” antes de “{before}”, na posição {pos}",
@@ -5257,5 +5255,11 @@
   "{enter} applies, {esc} discards. Each change shows in its task’s history.": "{enter} aplica, {esc} descarta. Cada mudança aparece no histórico da sua tarefa.",
   "{n, plural, one {# selected task} other {# selected tasks}}": "{n, plural, one {# tarefa selecionada} other {# tarefas selecionadas}}",
   "{n, plural, one {Apply # change} other {Apply # changes}}": "{n, plural, one {Aplicar # mudança} other {Aplicar # mudanças}}",
-  "More properties": "Mais propriedades"
+  "More properties": "Mais propriedades",
+  "Details of {title}": "Detalhes de {title}",
+  "Hide details": "Ocultar detalhes",
+  "Show details": "Mostrar detalhes",
+  "Open task": "Abrir tarefa",
+  "Show the details of the selected task under its row (unfold its subtasks first when they are folded), or the sub-projects of the focused sidebar project": "Mostrar os detalhes da tarefa selecionada sob a sua linha (expande primeiro as subtarefas se estiverem recolhidas), ou os subprojetos do projeto em foco na barra lateral",
+  "Hide the details of the selected task, else fold its subtasks (or go to its parent), or the sub-projects of the focused sidebar project": "Ocultar os detalhes da tarefa selecionada; caso contrário, recolher as subtarefas (ou ir para a tarefa principal), ou os subprojetos do projeto em foco na barra lateral"
 }

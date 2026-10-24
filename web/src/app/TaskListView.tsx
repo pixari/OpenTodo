@@ -84,10 +84,12 @@ function useListUi() {
   const [addingTo, setAddingTo] = useState<string | null>(null)
   /** The row's More button when the menu was opened from it (rows-v2 D7); null for `.`. */
   const actionsFrom = useRef<HTMLElement | null>(null)
+  /** The one row whose details are shown under it (row-expand D4): this list's state only, never stored. */
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const openActions = useCallback((picker: string | null = null, from: HTMLElement | null = null) => { actionsFrom.current = from; setActionsPicker(picker); setActionsOpen(true) }, [])
   const onActionsOpen = useCallback((v: boolean) => { setActionsOpen(v); if (!v) setActionsPicker(null) }, [])
   const ui: ListUi = { pickerFor, setPickerFor, assignFor, setAssignFor, prompt, setPrompt, addingUnder, setAddingUnder, setAddingTo, openActions }
-  return { ui, actionsOpen, actionsPicker, onActionsOpen, actionsFrom, selectMode, setSelectMode, addingTo }
+  return { ui, actionsOpen, actionsPicker, onActionsOpen, actionsFrom, selectMode, setSelectMode, addingTo, expandedId, setExpandedId }
 }
 
 /**
@@ -137,7 +139,7 @@ export function TaskListView({ route, userId, userRole }: { route: ListRoute; us
   const collapsedGroups = useCollapsedGroups()
   // Bulk selection (bulk-edit D1): ticked rows, separate from the cursor row.
   const { tickRows, selection, ticked } = useTickedRows(rows, taskMap, isReadOnly)
-  const { ui, actionsOpen, actionsPicker, onActionsOpen, actionsFrom, selectMode, setSelectMode, addingTo } = useListUi()
+  const { ui, actionsOpen, actionsPicker, onActionsOpen, actionsFrom, selectMode, setSelectMode, addingTo, expandedId, setExpandedId } = useListUi()
   // The open task lives in the shell's panel slot (app-shell D1); this view only selects and opens. The
   // Inbox keeps its task there, beside the list, from 1024 px (inbox-split D1), set up before the bindings' route reset.
   const openId = usePanelTaskId()
@@ -261,16 +263,16 @@ export function TaskListView({ route, userId, userRole }: { route: ListRoute; us
   useListShortcuts({
     ...shared, projectId, tree: m.tree, tickRows, treeView: m.treeView, projectReadOnly: m.projectReadOnly, projectEditable: m.projectEditable,
     today, userId, acceptPrompt, moveToSection, toggleViewMode,
-    editInline: (id) => { setSelectedId(id); setInline({ id }) },
+    editInline: (id) => { setSelectedId(id); setInline({ id }) }, expandedId, setExpandedId,
   })
-  const rowActions = useListBindings({ ...shared, setSelectMode, startDrag: drag.startDrag, insertAfter, listRoot, projectReadOnly: m.projectReadOnly, startInline })
+  const rowActions = useListBindings({ ...shared, setSelectMode, startDrag: drag.startDrag, insertAfter, listRoot, projectReadOnly: m.projectReadOnly, startInline, setExpandedId })
 
   const renderRow = rowRenderer({
     view: route.view, labelId: route.view === 'label' ? route.id : undefined, userId, projectMap: m.projectMap, labelMap: m.labelMap, memberMap: m.memberMap, selectedId, progress: m.progress, blocked: m.blocked,
     habits: m.habits, isReadOnly, board, manual, treeView: m.treeView, dropAt: drag.dropAt, draggingId: drag.draggingId, ticked: selection.ticked,
     showCheckbox: selectMode || (fine && selection.ticked.size > 0), fieldColumns: m.fieldColumns, projectFieldDefs: m.projectFieldDefs, siblingPos: m.siblingPos,
     timeColumn: m.timeColumn, actions: rowActions, addingUnder: ui.addingUnder, onCloseSubtask: () => ui.setAddingUnder(null),
-    inlineId: inline?.id ?? null, renderInline, departures, swipe: useListSwipe(listRoot, !fine && selection.ticked.size === 0 && !selectMode && !board, rows.length),
+    inlineId: inline?.id ?? null, renderInline, departures, expandedId, swipe: useListSwipe(listRoot, !fine && selection.ticked.size === 0 && !selectMode && !board, rows.length),
   })
 
   // The Inbox's own rows: its planned group is not part of it (inbox-planned-group D2).

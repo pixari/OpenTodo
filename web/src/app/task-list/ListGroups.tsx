@@ -55,6 +55,8 @@ export interface RowContext {
   renderInline?: (task: Task) => ReactNode
   /** Running completion sequences (motion-v2). */
   departures?: ReadonlyMap<string, Departure>
+  /** The one row whose details are shown under it (row-expand D4). */
+  expandedId?: string | null
 }
 
 /** The sequence a row plays: a ghost departs, a completed row that stayed rolled forward, Undo restores. */
@@ -140,6 +142,9 @@ export function rowRenderer(c: RowContext): (r: Row) => ReactNode {
           draggable={!ghost && !editing && !c.isReadOnly(r.task)}
           reorderable={!ghost && c.manual}
           collapsible={tree}
+          expandable={!c.board && !ghost}
+          // No row shows its details while a drag runs, so drop zones are one-line rows (row-expand D4).
+          expanded={!ghost && !c.draggingId && c.expandedId === r.task.id}
           dropIndicator={!ghost && c.dropAt?.id === r.task.id ? c.dropAt.zone : null}
           dragging={!ghost && c.draggingId === r.task.id}
           ticked={!ghost && c.ticked.has(r.task.id)}

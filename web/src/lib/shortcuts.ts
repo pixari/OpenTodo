@@ -186,8 +186,9 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'note.swipe', keys: ['Swipe a task (touch)'], description: 'Right completes, left schedules; the same two actions start the task\'s menu', section: 'tasks', scope: 'list', note: true },
   { id: 'note.hold', keys: ['Press and hold a task (touch)'], description: 'Tick it and show every checkbox; Select tasks in the page menu does the same, Done hides them', section: 'tasks', scope: 'list', note: true },
   { id: 'note.sorted-views', keys: ['Today, Upcoming, Assigned, Completed, labels, filters'], description: 'Sorted by date (or their own rule): no drag or Alt moves there', section: 'tasks', scope: 'list', note: true },
-  { id: 'list.collapse', keys: ['←'], description: 'Collapse the subtasks of the selected task (or go to its parent), or the sub-projects of the focused sidebar project', section: 'tasks', scope: 'list' },
-  { id: 'list.expand', keys: ['→'], description: 'Expand the subtasks of the selected task, or the sub-projects of the focused sidebar project', section: 'tasks', scope: 'list' },
+  // Expanded rows (row-expand D1): → shows more, ← shows less; the details open after folded subtasks unfold and close before they fold.
+  { id: 'list.expand', keys: ['→'], label: 'Show details', description: 'Show the details of the selected task under its row (unfold its subtasks first when they are folded), or the sub-projects of the focused sidebar project', section: 'tasks', scope: 'list' },
+  { id: 'list.collapse', keys: ['←'], label: 'Hide details', description: 'Hide the details of the selected task, else fold its subtasks (or go to its parent), or the sub-projects of the focused sidebar project', section: 'tasks', scope: 'list' },
   { id: 'project.move', keys: ['m'], description: 'Move the current project under another project or to the top level', section: 'trash', scope: 'view', views: ['project'] },
   // The Inbox's primary action (inbox-split D3): Process, one task at a time; `g p` still goes there from anywhere.
   { id: 'inbox.process', keys: ['p'], label: 'Process', description: 'In the Inbox: process its tasks one at a time', section: 'tasks', scope: 'view', views: ['inbox'] },

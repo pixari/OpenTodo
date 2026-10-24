@@ -304,6 +304,13 @@ const shots = [
     await go(p, demoBase, '/views', () => p.getByRole('button', { name: 'New view' }).waitFor())
     await p.locator('main').getByRole('button', { name: /^Menu for view Deep work/ }).first().click(); await settle(p, 500)
   }, async after(p) { await p.keyboard.press('Escape') } },
+  // An expanded row (row-expand): Today with the kitchen quotes' details open under the row, as Show details opens them.
+  { name: 'expand-a-row', server: D, async run(p) {
+    await go(p, demoBase, '/today', () => p.getByRole('heading', { level: 1, name: 'Today' }).waitFor())
+    const li = p.locator('li[data-task-id]', { has: p.locator('[data-row-title]', { hasText: 'Get three quotes for the kitchen' }) }).first()
+    await li.hover(); await li.locator('[data-row-action="details"]').click(); await p.locator('[data-row-details] [data-subtasks]').waitFor()
+    await p.mouse.move(700, 40); await p.locator('body').evaluate(() => (document.activeElement)?.blur()); await settle(p, 500)
+  } },
   // Completed tasks kept in the project (project-completed-section): the switch is per device, so the scene turns it on and off again.
   { name: 'project-completed', server: D, async run(p) {
     await go(p, demoBase, '/inbox'); await openProject(p, 'Work')

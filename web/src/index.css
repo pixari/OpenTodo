@@ -948,6 +948,8 @@ button.ui-column-add { @apply flex-row items-start justify-start px-3 py-2.5 hov
 [data-rolled] { animation: row-rolled var(--duration-emphasis) var(--ease-calm) var(--duration-emphasis) both; }
 [data-rolled] [data-row-meta] { animation: row-fade-in var(--duration-ui) var(--ease-calm) var(--duration-emphasis) both; }
 [data-restored] { animation: row-fade-in var(--duration-ui) var(--ease-calm) both; }
+/* An expanded row's details fade in (row-expand D5); reduced motion makes it instant, like every animation. */
+[data-row-details] { animation: row-fade-in var(--duration-ui) var(--ease-calm) both; }
 @media (prefers-reduced-motion: reduce) {
   .row-check-pop, [data-departing], [data-departing] *, [data-departing] [data-row-title]::after,
   [data-rolled], [data-rolled] *, [data-restored] { animation: none !important; }
@@ -1047,7 +1049,7 @@ button.ui-column-add { @apply flex-row items-start justify-start px-3 py-2.5 hov
 @media (width < 48rem) {
   .row-pad, :root[data-density="compact"] .row-pad { padding-block: 0; }
   .row-pad > [data-row-open] { min-height: 2.75rem; padding-block: 0.75rem; }
-  .row-pad > :is([data-leading-slot], [data-row-controls], [data-row-time]) { margin-top: 0.75rem; }
+  .row-pad > :is([data-leading-slot], [data-row-controls], [data-row-time], [data-row-expand]) { margin-top: 0.75rem; }
   .row-pad > [data-row-time]:empty { display: none; }
   @container row (width < 40rem) {
     [data-row-counts] { display: none; }

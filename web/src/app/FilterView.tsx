@@ -120,6 +120,8 @@ export function FilterView({ initialQuery = '' }: { initialQuery?: string } = {}
   const openId = usePanelTaskId()
   const setOpenId = setPanelTaskId
   const [pickerFor, setPickerFor] = useState<string | null>(null)
+  // The one row (by key) whose details are shown under it (row-expand D4); a board layout has none.
+  const [expanded, setExpanded] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   // A view can be saved from any query that parses and is not empty.
   const canSave = query.trim() !== '' && tryParse(query).ok
@@ -187,6 +189,7 @@ export function FilterView({ initialQuery = '' }: { initialQuery?: string } = {}
   const bulk = useBulkList(bulkTasks)
   useListKeys({
     rows, selected, setSelected, openId, setOpenId, pickerFor, setPickerFor, bulk,
+    expanded, setExpanded: display.layout === 'board' ? undefined : setExpanded,
     paused: saving,
     onIdleEscape: () => {
       setSelected(null)
@@ -279,6 +282,8 @@ export function FilterView({ initialQuery = '' }: { initialQuery?: string } = {}
             breadcrumb={tk.parent_id ? breadcrumbOf(tk, taskMap) : null}
             onToggle={() => act(setTaskCompleted(tk.id, !tk.completed_at))}
             onOpen={() => { setSelected(key); setOpenId(tk.id) }}
+            expanded={expanded === key}
+            onExpand={() => { setSelected(key); setExpanded((cur) => (cur === key ? null : key)) }}
             {...bulk.rowProps(tk.id)}
           />
         )} />

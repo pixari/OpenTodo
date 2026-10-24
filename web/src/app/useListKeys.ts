@@ -1,6 +1,6 @@
 // Keyboard handling shared by the Filter view and saved views: the `list` scope
-// handlers for j / k, Enter, c, 1–4, Shift+L, Delete, e, d, n, Shift+N, Shift+E and
-// Esc (the shortcut registry names them; the shell's dispatcher resolves the keys).
+// handlers for j / k, Enter, c, 1–4, Shift+L, Delete, e, d, n, Shift+N, Shift+E, → / ←
+// and Esc (the shortcut registry names them; the shell's dispatcher resolves the keys).
 import { useEffect, useRef } from 'react'
 import { deleteTask, parkTask, setTaskCompleted, unparkTask, updateTask } from '../lib/ops'
 import type { Priority, Task } from '../lib/types'
@@ -33,6 +33,9 @@ export interface ListKeys {
   paused?: boolean
   /** Bulk selection (bulk-edit D2): x / Space tick, Shift+↓/↑ extend, `.`, Ctrl/⌘+A, and the action keys on the ticked set. */
   bulk?: BulkList
+  /** The row (by key) whose details are shown under it (row-expand D1, D4); without a setter the list does not expand (a board layout). */
+  expanded?: string | null
+  setExpanded?: (key: string | null) => void
 }
 
 export function useListKeys(opts: ListKeys): void {
@@ -84,6 +87,8 @@ export function useListKeys(opts: ListKeys): void {
       if (b && b.ticked.length && !o.pickerFor && !o.openId) b.selection.clear()
       else if (o.pickerFor) o.setPickerFor(null)
       else if (o.openId) o.setOpenId(null)
+      // The details of an expanded row close before the selection clears (row-expand D1).
+      else if (o.expanded && o.setExpanded) o.setExpanded(null)
       else o.onIdleEscape()
     },
     'list.tick': () => { if (!b || !row) return false; b.selection.toggle(row.id) },
@@ -91,6 +96,9 @@ export function useListKeys(opts: ListKeys): void {
     'list.actions': () => { if (!b || !(b.ticked.length || row)) return false; b.openActions() },
     'list.down': () => o.setSelected(o.rows[Math.min(o.rows.length - 1, idx + 1)]?.key ?? null),
     'list.up': () => o.setSelected(o.rows[Math.max(0, idx - 1)]?.key ?? null),
+    // → shows the selected row's details, ← hides them (row-expand D1); these rows have no subtask tree.
+    'list.expand': () => { if (!row || !o.setExpanded) return false; o.setExpanded(o.selected) },
+    'list.collapse': () => { if (!row || !o.setExpanded || o.expanded !== o.selected) return false; o.setExpanded(null) },
     'list.open': (e) => { if (!row || isActivationTarget(e.target)) return false; o.setOpenId(row.id) },
     'list.complete': () => {
       if (b?.ticked.length) { void runBulk(b.ticked, { kind: 'complete' }); return }

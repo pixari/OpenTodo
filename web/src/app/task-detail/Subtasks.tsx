@@ -14,11 +14,13 @@ export interface SubtasksProps {
   readOnly: boolean
   /** The page's bordered block (head, rows, add line) instead of the panel's bare list. */
   boxed?: boolean
+  /** The add line under the list (off in an expanded row, row-expand D3). */
+  add?: boolean
   onToggle: (task: Task) => void
   onOpen?: (id: string) => void
 }
 
-export function Subtasks({ task, items, progress, readOnly, boxed = false, onToggle, onOpen }: SubtasksProps) {
+export function Subtasks({ task, items, progress, readOnly, boxed = false, add = true, onToggle, onOpen }: SubtasksProps) {
   const row = boxed ? 'flex min-h-9 items-center gap-2 border-t border-soft px-3 hover:bg-hover' : 'flex items-center gap-2 rounded-control px-1 py-1 hover:bg-sunken dark:hover:bg-raised'
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
   return (
@@ -53,7 +55,7 @@ export function Subtasks({ task, items, progress, readOnly, boxed = false, onTog
           </li>
         ))}
       </ul>
-      {!readOnly && <div className={boxed ? 'border-t border-soft px-2 py-1' : undefined}><AddSubtask parent={task} /></div>}
+      {!readOnly && add && <div className={boxed ? 'border-t border-soft px-2 py-1' : undefined}><AddSubtask parent={task} /></div>}
     </section>
   )
 }

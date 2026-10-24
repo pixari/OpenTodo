@@ -69,6 +69,9 @@ export interface ShortcutContext {
   toggleViewMode: () => void
   /** F2: edit the selected task's title in place (inline-task-editing). */
   editInline?: (id: string) => void
+  /** The row whose details are shown under it, and its setter (row-expand D1, D4). */
+  expandedId: string | null
+  setExpandedId: (id: string | null) => void
 }
 
 /** Selecting tasks moves keyboard attention to the list: a sidebar project left
@@ -145,6 +148,8 @@ export function useListShortcuts(c: ShortcutContext) {
       else if (ui.prompt) ui.setPrompt(null)
       else if (ui.addingUnder) ui.setAddingUnder(null)
       else if (openId && !taskSplitDocks()) setOpenId(null)
+      // The details of an expanded row close before the selection clears (row-expand D1).
+      else if (c.expandedId) c.setExpandedId(null)
       else if (selection.ticked.size) selection.clear()
       // On the Inbox's split the pane follows the cursor: Escape clears both (inbox-split D1).
       else if (openId) { setOpenId(null); setSelectedId(null) }
@@ -158,14 +163,19 @@ export function useListShortcuts(c: ShortcutContext) {
     'list.actions': () => { if (!ticked.length && !selectedId) return false; ui.openActions() },
     'list.down': () => { leaveSidebar(); setSelectedId(rows[Math.min(rows.length - 1, idx + 1)]?.task.id ?? null) },
     'list.up': () => { leaveSidebar(); setSelectedId(rows[Math.max(0, idx - 1)]?.task.id ?? null) },
+    // ← shows less, → shows more (row-expand D1): the details close first and open last, around the subtasks.
     'list.collapse': () => {
-      if (!row || !c.treeView) return false
-      if (row.hasChildren && !row.collapsed) c.toggleCollapsed(row.task.id, true)
+      if (!row) return false
+      if (c.expandedId === row.task.id) c.setExpandedId(null)
+      else if (!c.treeView) return false
+      else if (row.hasChildren && !row.collapsed) c.toggleCollapsed(row.task.id, true)
       else if (row.parent) setSelectedId(row.parent)
     },
     'list.expand': () => {
-      if (!row || !c.treeView) return false
-      if (row.hasChildren && row.collapsed) c.toggleCollapsed(row.task.id, false)
+      if (!row) return false
+      if (c.treeView && row.hasChildren && row.collapsed) c.toggleCollapsed(row.task.id, false)
+      else if (!c.board) c.setExpandedId(row.task.id)
+      else return false
     },
     'list.open': (e) => {
       if (ui.prompt) { c.acceptPrompt(); return }
