@@ -37,7 +37,15 @@ export interface RichComposerFieldProps {
   onFiles?: (files: File[]) => void
   /** Plan images for embedding: their attachment ids, written with the comment. */
   onImages?: (files: File[]) => Promise<{ id: string; name: string }[]>
-  fieldRef: Ref<{ focus: () => void } | null>
+  fieldRef: Ref<RichFieldHandle | null>
+  /** Show the formatting row whatever the pointer (the Formatting toggle, rich-comments D3). */
+  toolbar?: boolean
+}
+
+/** What the composer asks of the field: focus, and start a mention at the caret (rich-comments D2). */
+export interface RichFieldHandle {
+  focus: () => void
+  mention: () => void
 }
 
 /** The editor behind a composer element (tests drive it like a person would). */
@@ -83,7 +91,18 @@ export default function RichComposerField(p: RichComposerFieldProps) {
   const envRef = useRef(env)
   envRef.current = env
 
-  useImperativeHandle(p.fieldRef, () => ({ focus: () => view.current?.focus() }), [])
+  useImperativeHandle(p.fieldRef, () => ({
+    focus: () => view.current?.focus(),
+    // `@` at the caret, after a space when it follows a word, so the suggest list opens.
+    mention: () => {
+      const v = view.current
+      if (!v) return
+      v.focus()
+      const { $from, from } = v.state.selection
+      const before = $from.parentOffset > 0 ? v.state.doc.textBetween(from - 1, from) : ''
+      v.dispatch(v.state.tr.insertText(before && !/\s/.test(before) ? ' @' : '@').scrollIntoView())
+    },
+  }), [])
 
   useEffect(() => {
     const nodes = parse(p.value)
@@ -164,7 +183,7 @@ export default function RichComposerField(p: RichComposerFieldProps) {
 
   return (
     <div className="space-y-1">
-      <EditorToolbar view={view.current} env={env} visible={focused || menuOpen} onMenu={setMenuOpen} />
+      <EditorToolbar view={view.current} env={env} visible={focused || menuOpen} onMenu={setMenuOpen} always={p.toolbar} />
       <div ref={host} className="ui-input min-h-16 max-h-60 overflow-y-auto p-0" data-rich-composer />
       {chrome.overlays}
       {linkAsk && (

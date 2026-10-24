@@ -168,14 +168,16 @@ function SuggestList({ id, open, items, active, onPick }: { id: string; open: { 
  * The formatting row on touch screens (rich-text-editing "Editing toolbar on
  * touch screens"): shown only on a coarse pointer while the editor has focus.
  */
-export function EditorToolbar({ view, env, visible, onMenu, coarse: forced }: {
+export function EditorToolbar({ view, env, visible, onMenu, coarse: forced, always = false }: {
   view: EditorView | null; env: CommandEnv; visible: boolean; onMenu: (open: boolean) => void
   /** Stories: show the touch row whatever the pointer. */
   coarse?: boolean
+  /** Shown on request whatever the pointer and focus (the comment composer's Formatting toggle, rich-comments D3). */
+  always?: boolean
 }) {
   const coarse = useMediaQuery('(pointer: coarse)') || !!forced
   const commands = useMemo(() => editorCommands(), [])
-  if (!coarse || !visible || !view) return null
+  if (!view || !(always || (coarse && visible))) return null
   const byId = (id: string) => commands.find((c) => c.id === id) as EditorCommand
   const run = (id: string) => byId(id).run(view, env)
   const more = commands.filter((c) => !['bold', 'italic', 'link', 'bullet', 'checklist'].includes(c.id) && (c.available ? c.available(view, env) : true))

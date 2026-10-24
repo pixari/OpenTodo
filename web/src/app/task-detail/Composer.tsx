@@ -4,13 +4,14 @@
 // composer keeps an unsent draft per task in this tab's session (never synced).
 // Expanded, the field is the notes' rich-text editor (editor-everywhere D1, D2),
 // loaded lazily; until it arrives it is a plain text field holding the same text.
+import { flushSync } from 'react-dom'
 import { forwardRef, type KeyboardEvent, lazy, Suspense, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Kbd } from '../shortcuts/Kbd'
 import { planFiles, type PlannedFile } from '../../lib/attachments'
 import { mentionAt, mentionCandidates, mentionsInBody, mentionToken, type MentionTarget } from '../../lib/comments'
 import { MentionOption } from './MentionOption'
 import { uuid } from '../../lib/ids'
-import { Button, ComposerFrame, IconButton, Popover } from '../../ui'
+import { Button, ComposerFrame, IconButton, Popover, useMediaQuery } from '../../ui'
 import { Icon } from '../../ui'
 import { filesFrom } from './AttachmentsRow'
 import { t } from '../../lib/i18n'
@@ -19,6 +20,7 @@ const MAX_LINES = 10
 const LINE_PX = 20
 
 const RichComposerField = lazy(() => import('./RichComposerField'))
+type RichFieldHandle = import('./RichComposerField').RichFieldHandle
 
 // The rich editor is on by default; a test of the plain field turns it off.
 let richComposer = true
@@ -88,7 +90,10 @@ export const Composer = forwardRef<HTMLElement | null, ComposerProps>(function C
   { id, draftTaskId, initial = '', members, me, onSubmit, onCancel, autoFocus, submitLabel, label, attach = false, taskId, rich: richProp }, ref,
 ) {
   const [rich] = useState(() => richProp ?? richComposer)
-  const richField = useRef<{ focus: () => void } | null>(null)
+  const richField = useRef<RichFieldHandle | null>(null)
+  // The formatting row on a computer (rich-comments D3); touch screens show it while the editor has focus.
+  const [formatting, setFormatting] = useState(false)
+  const coarse = useMediaQuery('(pointer: coarse)')
   const richMentions = useRef<string[] | null>(null)
   const commentId = useRef(uuid())
   const embeds = useRef<PlannedFile[]>([])
@@ -143,7 +148,33 @@ export const Composer = forwardRef<HTMLElement | null, ComposerProps>(function C
     setPicked((p) => new Map(p).set(m.userId, token))
     setCaret(pos)
     setActive(0)
-    requestAnimationFrame(() => area.current?.setSelectionRange(pos, pos))
+    // The caret goes after the name; setting the range may not report a selection change.
+    requestAnimationFrame(() => {
+      area.current?.setSelectionRange(pos, pos)
+      setCaret(pos)
+    })
+  }
+
+  /** The Mention control (rich-comments D2): `@` at the caret, the completion opens. */
+  function startMention() {
+    if (richField.current) {
+      richField.current.mention()
+      return
+    }
+    const el = area.current
+    const pos = el?.selectionStart ?? body.length
+    const prev = body.slice(0, pos)
+    const text = prev && !/\s$/.test(prev) ? ' @' : '@'
+    const next = `${prev}${text}${body.slice(pos)}`
+    // Rendered at once, so the caret can go after the `@` before anything else happens.
+    flushSync(() => {
+      setBody(next)
+      setCaret(pos + text.length)
+      setClosed(false)
+      setActive(0)
+    })
+    el?.focus()
+    el?.setSelectionRange(pos + text.length, pos + text.length)
   }
 
   const canSend = !!body.trim() || files.length > 0
@@ -240,7 +271,15 @@ export const Composer = forwardRef<HTMLElement | null, ComposerProps>(function C
   )
   // The shared frame (task-full-page D6): the field, then attach on the left, the keys and Send on the right.
   const tools = (
-    <>
+    // The controls keep the field's focus and selection: a press never moves focus.
+    <span className="contents" onMouseDown={(e) => { if ((e.target as HTMLElement).closest('[data-keep-focus]')) e.preventDefault() }}>
+      {members.length > 0 && (
+        <IconButton icon="at-sign" size="sm" label={t('Mention someone')} onClick={startMention} data-keep-focus="" data-composer-mention="" />
+      )}
+      {rich && !coarse && (
+        <IconButton icon="bold" size="sm" label={t('Formatting')} aria-pressed={formatting} onClick={() => setFormatting((f) => !f)}
+          data-keep-focus="" data-composer-formatting="" />
+      )}
       {attach && (
         <>
           <input ref={picker} type="file" multiple hidden aria-label={t('Choose files for the comment')} data-testid="comment-file-picker"
@@ -248,7 +287,7 @@ export const Composer = forwardRef<HTMLElement | null, ComposerProps>(function C
           <IconButton icon="paperclip" size="sm" label={t('Attach files')} onClick={() => picker.current?.click()} />
         </>
       )}
-    </>
+    </span>
   )
   const end = (
     <>
@@ -263,7 +302,7 @@ export const Composer = forwardRef<HTMLElement | null, ComposerProps>(function C
         {rich ? (
           <Suspense fallback={plain}>
             <RichComposerField id={id} value={body} members={members} me={me} label={label} placeholder={placeholder} describedBy={`${id}-hint`}
-              autoFocus={autoFocus || (!!area.current && document.activeElement === area.current)} taskId={taskId ?? null} fieldRef={richField}
+              autoFocus={autoFocus || (!!area.current && document.activeElement === area.current)} taskId={taskId ?? null} fieldRef={richField} toolbar={formatting}
               onChange={(next, ids) => { richMentions.current = ids; setBody(next) }}
               onSubmit={() => void submit()}
               onEscape={() => { if (onCancel) onCancel(); else (document.activeElement as HTMLElement | null)?.blur() }}
