@@ -26,7 +26,7 @@ New tasks without a project land in the **Inbox**. See [Work from the list](work
 
 ## Edit a task
 
-Click a title (or press <kbd>F2</kbd>) to edit it in place; click the rest of the row, or press <kbd>Enter</kbd>, to open its panel. Changes save as you make them. See [The task panel](task-panel.md) and [Notes, subtasks and dependencies](notes-and-subtasks.md).
+Click a title (or press <kbd>F2</kbd>) to edit it in place; click the rest of the row, or press <kbd>Enter</kbd>, to open its panel. Press <kbd>→</kbd> to [expand the row](expand-a-row.md) instead. Changes save as you make them. See [The task panel](task-panel.md) and [Notes, subtasks and dependencies](notes-and-subtasks.md).
 
 ### Quick changes from the list
 

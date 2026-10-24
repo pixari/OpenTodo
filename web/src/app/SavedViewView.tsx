@@ -134,11 +134,14 @@ export function SavedViewView({ view, data }: { view: View; data: ViewData }) {
   const openId = usePanelTaskId()
   const setOpenId = setPanelTaskId
   const [pickerFor, setPickerFor] = useState<string | null>(null)
+  // The one row (by key) whose details are shown under it (row-expand D4); a board layout has none.
+  const [expanded, setExpanded] = useState<string | null>(null)
   const bulkTasks = useMemo(() => rows.map((r) => r.task), [rows])
   const bulk = useBulkList(bulkTasks)
 
   useListKeys({
     rows, selected, setSelected, openId, setOpenId, pickerFor, setPickerFor, bulk,
+    expanded, setExpanded: display.layout === 'board' ? undefined : setExpanded,
     onIdleEscape: () => setSelected(null),
     extra: {
       'list.schedule': () => {
@@ -219,6 +222,8 @@ export function SavedViewView({ view, data }: { view: View; data: ViewData }) {
                 breadcrumb={tk.parent_id ? breadcrumbOf(tk, taskMap) : null}
                 onToggle={() => act(setTaskCompleted(tk.id, !tk.completed_at))}
                 onOpen={() => { setSelected(key); setOpenId(tk.id) }}
+                expanded={expanded === key}
+                onExpand={() => { setSelected(key); setExpanded((cur) => (cur === key ? null : key)) }}
                 {...bulk.rowProps(tk.id)}
               />
             )} />

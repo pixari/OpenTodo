@@ -24,7 +24,7 @@
 // its width allows; the rules are in index.css, "The property column".
 import { isSample } from '../lib/sampleTasks'
 import { hueFor, Icon, LabelChips, ReadAs, ToneText, TruncatedText, type IconName, type Tone } from '../ui'
-import { memo, type ReactNode, useLayoutEffect, useRef } from 'react'
+import { lazy, memo, type ReactNode, Suspense, useLayoutEffect, useRef } from 'react'
 import type { RowImplied } from '../lib/listGroups'
 import { describeDeadline, describeDue, formatDate, formatTime, localDueOf, logicalToday, zoneHint } from '../lib/dates'
 import { formatMinutes } from '../lib/duration'
@@ -49,6 +49,9 @@ import { useTaskTracked } from '../lib/timeEntries'
 import { OriginChip } from './OriginChip'
 import { DEADLINE_TONE, ladderTone, PRIORITY_RING } from './rowTone'
 import { RowActionCluster } from './task-list/RowActionCluster'
+
+/** The details of an expanded row (row-expand D3), loaded on the first expand. */
+const RowDetails = lazy(() => import('./task-list/RowDetails'))
 
 /** Field values shown on a row before the rest collapse into "+n" (custom-fields). */
 export const MAX_FIELD_BADGES = 3
@@ -325,6 +328,10 @@ export interface TaskRowProps {
   hidden?: readonly RowProperty[]
   /** The Inbox's source line under the title, "From email · yesterday" (inbox-split D4); it stands for the origin chip. */
   source?: boolean
+  /** The task's details are shown under the row (row-expand, task-list-presentation "Expanded rows"). */
+  expanded?: boolean
+  /** Shows or hides the details; without it the row cannot expand (boards, review screens). */
+  onExpand?: () => void
 }
 
 const NO_HIDDEN: readonly RowProperty[] = []
@@ -420,7 +427,7 @@ export const TaskRow = memo(function TaskRow(props: TaskRowProps | CompactRowPro
   return props.shape === 'compact' ? <CompactRow {...props} /> : <FullRow {...props} />
 })
 
-function FullRow({ task, project, labels = [], assignee, assignedToMe = false, selected, showProject, depth = 0, progress, blockedBy = 0, habit = null, breadcrumb, hasChildren = false, collapsed = false, readOnly = false, onToggle, onOpen, onToggleCollapse, shape = 'row', timeColumn = false, actions = true, onMore, forceActions = false, onPointerDown, dropKey, dropIndicator = null, dragging = false, ticked = false, showCheckbox = false, onTick, hideFieldBadges = false, posInSet, setSize, implied, omitLabel, tracked: trackedProp, inline, motion, swipe = false, forceSwipe, hidden = NO_HIDDEN, source = false }: TaskRowProps) {
+function FullRow({ task, project, labels = [], assignee, assignedToMe = false, selected, showProject, depth = 0, progress, blockedBy = 0, habit = null, breadcrumb, hasChildren = false, collapsed = false, readOnly = false, onToggle, onOpen, onToggleCollapse, shape = 'row', timeColumn = false, actions = true, onMore, forceActions = false, onPointerDown, dropKey, dropIndicator = null, dragging = false, ticked = false, showCheckbox = false, onTick, hideFieldBadges = false, posInSet, setSize, implied, omitLabel, tracked: trackedProp, inline, motion, swipe = false, forceSwipe, hidden = NO_HIDDEN, source = false, expanded = false, onExpand }: TaskRowProps) {
   const card = shape === 'card'
   const hides = (p: RowProperty) => hidden.includes(p)
   // One shared, ticking map for every row (time-tracking D4); stories and tests may pass the figure.
@@ -498,7 +505,12 @@ function FullRow({ task, project, labels = [], assignee, assignedToMe = false, s
   }
   const meta = card ? (metaItems(m) > 0 || m.project) && <CardMeta m={m} />
     : (metaItems({ ...m, repeat: null }) > 0 || m.project || extra === 'progress') && <RowLine m={m} extra={extra} progress={progressCount} projectColor={projectName ? project?.color : undefined} projectColumn={showProject && !hides('project')} />
-  const revealed = !card && !readOnly && !inline && actions
+  // Expanded rows (row-expand D2): a list row may show its details under it; never a card, the row edited in place or a departing row.
+  const canExpand = !!onExpand && !card && !inline && motion !== 'leave'
+  const showDetails = canExpand && expanded
+  const detailsId = `row-details-${task.id}`
+  // A viewer's row reveals Show details only (row-expand D2); an editor's all four actions.
+  const revealed = !card && !inline && actions && (!readOnly || canExpand)
 
   // A departing row is the last picture of a task that was completed: done, and out of reach.
   const departing = motion === 'leave'
@@ -513,7 +525,7 @@ function FullRow({ task, project, labels = [], assignee, assignedToMe = false, s
   const trailing = card ? originChip && <span data-row-trailing="" className="ml-auto flex shrink-0 items-start">{originChip}</span>
     : (originChip || revealed) && (
     // While a two-line row can reveal its actions the group keeps their width (7 rem), so they never cover the open control (ux-fixes-phone, audit M11) and revealing them moves nothing; a one-line row lets them float over its column (index.css).
-    <span data-row-trailing="" className={`ml-auto mt-0.5 flex h-5 min-w-0 items-center justify-end gap-2 transition-opacity duration-(--duration-ui) ${revealed ? `md:pointer-fine:min-w-28 ${forceActions ? 'md:pointer-fine:opacity-0' : 'md:pointer-fine:group-hover:opacity-0 md:pointer-fine:group-focus-within:opacity-0'}` : ''}`}>
+    <span data-row-trailing="" className={`ml-auto mt-0.5 flex h-5 min-w-0 items-center justify-end gap-2 transition-opacity duration-(--duration-ui) ${revealed ? `${readOnly ? 'md:pointer-fine:min-w-8' : 'md:pointer-fine:min-w-36'} ${forceActions ? 'md:pointer-fine:opacity-0' : 'md:pointer-fine:group-hover:opacity-0 md:pointer-fine:group-focus-within:opacity-0'}` : ''}`}>
       {originChip && <span className="flex shrink-0">{originChip}</span>}
     </span>
   )
@@ -549,7 +561,8 @@ function FullRow({ task, project, labels = [], assignee, assignedToMe = false, s
         onOpen()
       }}
       style={depth ? { paddingLeft: `${Math.min(depth, MAX_INDENT) * 1.5 + 0.5}rem` } : undefined}
-      className={`group relative flex items-start gap-2 rounded-control px-2 ${card ? '' : '@container/row'} ${swipe ? 'touch-pan-y' : ''} transition-[opacity,transform] duration-(--duration-emphasis) ease-calm ${card ? 'py-2.5 border border-default bg-surface shadow-1 dark:bg-raised' : 'row-pad'} ${dropIndicator === 'inside' ? feedback.inside : ''} ${ticked ? 'bg-accent-soft' : selected ? (card ? 'ring-1 ring-accent/50' : 'row-selected') : card ? '' : 'row-hover'} ${lift}`}
+      data-expanded={showDetails || undefined}
+      className={`group relative flex items-start gap-2 rounded-control px-2 ${showDetails ? 'flex-wrap' : ''} ${card ? '' : '@container/row'} ${swipe ? 'touch-pan-y' : ''} transition-[opacity,transform] duration-(--duration-emphasis) ease-calm ${card ? 'py-2.5 border border-default bg-surface shadow-1 dark:bg-raised' : 'row-pad'} ${dropIndicator === 'inside' ? feedback.inside : ''} ${ticked ? 'bg-accent-soft' : selected ? (card ? 'ring-1 ring-accent/50' : 'row-selected') : card ? '' : 'row-hover'} ${lift}`}
     >
       {(dropIndicator === 'before' || dropIndicator === 'after') && (
         // The drop position: a line with a dot at its start (task-list-presentation "Drag feedback").
@@ -599,6 +612,7 @@ function FullRow({ task, project, labels = [], assignee, assignedToMe = false, s
       </span>
       {column && <TimeCell time={due?.time ?? null} timeTone={dueDay ? ladderTone(dueDay, logicalToday()) : 'muted'} deadline={deadlineInColumn ? deadline : null} deadlineLabel={deadlineLabel} />}
       {inline ?? <button type="button" className="flex min-w-0 flex-1 flex-col text-left pointer-fine:-my-px pointer-fine:py-px" data-row-open
+        aria-expanded={canExpand ? showDetails : undefined} aria-controls={showDetails ? detailsId : undefined}
         onClick={(e) => {
           // Shift+click extends, Ctrl/⌘+click toggles the tick instead of opening (bulk-edit D3).
           if (onTick && !readOnly && (e.shiftKey || e.ctrlKey || e.metaKey)) { e.preventDefault(); onTick(e.shiftKey); return }
@@ -621,7 +635,27 @@ function FullRow({ task, project, labels = [], assignee, assignedToMe = false, s
         {source && !card && <SourceLine task={task} />}
       </button>}
       {trailing}
-      {revealed && <RowActionCluster task={task} onMore={onMore} force={forceActions} />}
+      {canExpand && (
+        // Touch and narrow windows (row-expand D2): one quiet disclosure at the row's end; a fine pointer from 768 px has it in the revealed actions.
+        // The slot sits on the title's line like the checkbox's; the button inside takes a 44 px target on touch.
+        <span data-row-expand="" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center md:pointer-fine:hidden">
+          <button type="button" aria-expanded={showDetails} aria-controls={showDetails ? detailsId : undefined}
+            aria-label={showDetails ? t('Hide details') : t('Show details')} onClick={onExpand}
+            className="touch-target flex h-5 w-5 items-center justify-center rounded-chip text-faint hover:bg-hover hover:text-muted pointer-coarse:-m-3">
+            <Icon name="chevron-down" size="xs" className={`transition-transform duration-(--duration-ui) ${showDetails ? 'rotate-180' : ''}`} />
+          </button>
+        </span>
+      )}
+      {revealed && <RowActionCluster task={task} onMore={onMore} force={forceActions} editable={!readOnly}
+        details={canExpand ? { expanded: showDetails, controls: detailsId, onToggle: onExpand! } : undefined} />}
+      {showDetails && (
+        // Indented under the title column: past the leading slot, the checkbox and the time column (row-expand D3).
+        <div className={`min-w-0 basis-full pl-[3.25rem] ${column ? 'md:pl-[calc(3.75rem+var(--row-time-w))]' : ''}`}>
+          <Suspense fallback={null}>
+            <RowDetails task={task} id={detailsId} readOnly={readOnly} childrenShown={!!onToggleCollapse && hasChildren && !collapsed} onOpen={() => onOpen()} />
+          </Suspense>
+        </div>
+      )}
       {swipe && swiping.layers}
     </li>
   )

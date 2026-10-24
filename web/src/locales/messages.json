@@ -2403,9 +2403,6 @@
   "Collapse subtasks": [
     "web/src/app/TaskRow.tsx"
   ],
-  "Collapse the subtasks of the selected task (or go to its parent), or the sub-projects of the focused sidebar project": [
-    "web/src/lib/shortcuts.ts"
-  ],
   "Collapse {name}": [
     "web/src/app/ProjectsTable.tsx",
     "web/src/app/Sidebar.tsx"
@@ -3482,6 +3479,9 @@
     "web/src/app/ImportScreen.tsx",
     "web/src/app/task-detail/TaskFacts.tsx"
   ],
+  "Details of {title}": [
+    "web/src/app/task-list/RowDetails.tsx"
+  ],
   "Detect automatically": [
     "web/src/app/ImportScreen.tsx"
   ],
@@ -4343,9 +4343,6 @@
   ],
   "Expand subtasks": [
     "web/src/app/TaskRow.tsx"
-  ],
-  "Expand the subtasks of the selected task, or the sub-projects of the focused sidebar project": [
-    "web/src/lib/shortcuts.ts"
   ],
   "Expand {name}": [
     "web/src/app/ProjectsTable.tsx",
@@ -5230,6 +5227,11 @@
   "Hide delivery log": [
     "web/src/app/WebhooksPanel.tsx"
   ],
+  "Hide details": [
+    "web/src/app/TaskRow.tsx",
+    "web/src/app/task-list/RowActionCluster.tsx",
+    "web/src/lib/shortcuts.ts"
+  ],
   "Hide other calendars on this device": [
     "web/src/app/CalendarView.tsx",
     "web/src/app/PlanView.tsx"
@@ -5242,6 +5244,9 @@
   ],
   "Hide text": [
     "web/src/app/task-detail/HistoryTab.tsx"
+  ],
+  "Hide the details of the selected task, else fold its subtasks (or go to its parent), or the sub-projects of the focused sidebar project": [
+    "web/src/lib/shortcuts.ts"
   ],
   "Hide the filter": [
     "web/src/app/views/ViewToolbar.tsx"
@@ -5303,7 +5308,8 @@
     "web/src/app/BackupsPanel.tsx"
   ],
   "How": [
-    "web/src/app/task-detail/Facets.tsx"
+    "web/src/app/task-detail/Facets.tsx",
+    "web/src/app/task-list/RowDetails.tsx"
   ],
   "How dates and times look and where weeks start, on all your devices.": [
     "web/src/lib/settingsCopy.ts"
@@ -8398,6 +8404,9 @@
   "Open since {date}": [
     "web/src/app/review/CarryOver.tsx"
   ],
+  "Open task": [
+    "web/src/app/task-list/RowDetails.tsx"
+  ],
   "Open tasks including sub-projects": [
     "web/src/app/Sidebar.tsx",
     "web/src/app/SubProjects.tsx"
@@ -10916,6 +10925,11 @@
   "Show completed tasks": [
     "web/src/app/ProjectHeader.tsx"
   ],
+  "Show details": [
+    "web/src/app/TaskRow.tsx",
+    "web/src/app/task-list/RowActionCluster.tsx",
+    "web/src/lib/shortcuts.ts"
+  ],
   "Show in Assigned to me": [
     "web/src/app/task-detail/Facets.tsx"
   ],
@@ -10926,13 +10940,15 @@
     "web/src/app/ActivityPanel.tsx",
     "web/src/app/MonthView.tsx",
     "web/src/app/ProjectNote.tsx",
-    "web/src/app/calendar/DayColumn.tsx"
+    "web/src/app/calendar/DayColumn.tsx",
+    "web/src/app/task-list/RowDetails.tsx"
   ],
   "Show maps and address search": [
     "web/src/app/locations/MapsSettings.tsx"
   ],
   "Show more": [
-    "web/src/app/ProjectNote.tsx"
+    "web/src/app/ProjectNote.tsx",
+    "web/src/app/task-list/RowDetails.tsx"
   ],
   "Show more {older}": [
     "web/src/app/task-list/ListGroups.tsx"
@@ -10959,6 +10975,9 @@
   ],
   "Show text": [
     "web/src/app/task-detail/HistoryTab.tsx"
+  ],
+  "Show the details of the selected task under its row (unfold its subtasks first when they are folded), or the sub-projects of the focused sidebar project": [
+    "web/src/lib/shortcuts.ts"
   ],
   "Show the filter": [
     "web/src/app/views/ViewToolbar.tsx"
@@ -13936,6 +13955,7 @@
     "web/src/app/task-detail/TaskPageView.tsx",
     "web/src/app/task-list/InlineEditor.tsx",
     "web/src/app/task-list/ListChrome.tsx",
+    "web/src/app/task-list/RowDetails.tsx",
     "web/src/lib/dependencies.ts",
     "web/src/lib/dnd.ts",
     "web/src/lib/facets.ts",
@@ -14383,7 +14403,8 @@
     "web/src/app/quickadd/FieldRows.tsx",
     "web/src/app/rules/RuleFields.tsx",
     "web/src/app/task-detail/Facets.tsx",
-    "web/src/app/task-detail/WhenControl.tsx"
+    "web/src/app/task-detail/WhenControl.tsx",
+    "web/src/app/task-list/RowDetails.tsx"
   ],
   "When do I get things done?": [
     "web/src/app/review/StatsView.tsx"
@@ -14397,6 +14418,7 @@
   "Where": [
     "web/src/app/IssueEditor.tsx",
     "web/src/app/task-detail/Facets.tsx",
+    "web/src/app/task-list/RowDetails.tsx",
     "web/src/page/TaskPageScreen.tsx"
   ],
   "Where does my time go?": [
@@ -14427,7 +14449,8 @@
     "web/src/app/RelaySettings.tsx"
   ],
   "Who": [
-    "web/src/app/task-detail/Facets.tsx"
+    "web/src/app/task-detail/Facets.tsx",
+    "web/src/app/task-list/RowDetails.tsx"
   ],
   "Who must use two-factor authentication. API tokens are never affected.": [
     "web/src/lib/settingsCopy.ts"
@@ -16618,7 +16641,8 @@
     "web/src/app/auditFormat.ts"
   ],
   "{n, plural, one {# attachment} other {# attachments}}": [
-    "web/src/app/TaskRow.tsx"
+    "web/src/app/TaskRow.tsx",
+    "web/src/app/task-list/RowDetails.tsx"
   ],
   "{n, plural, one {# caught into the Inbox.} other {# caught into the Inbox.}}": [
     "web/src/app/review/ReviewView.tsx"
@@ -16644,7 +16668,8 @@
     "web/src/lib/sharing.ts"
   ],
   "{n, plural, one {# comment} other {# comments}}": [
-    "web/src/app/TaskRow.tsx"
+    "web/src/app/TaskRow.tsx",
+    "web/src/app/task-list/RowDetails.tsx"
   ],
   "{n, plural, one {# completed task hidden by display options} other {# completed tasks hidden by display options}}": [
     "web/src/app/task-list/ListChrome.tsx"

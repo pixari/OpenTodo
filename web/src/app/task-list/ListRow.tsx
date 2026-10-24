@@ -16,9 +16,11 @@ export interface RowActions {
   drag: (e: React.PointerEvent, task: Task) => void
   /** Opens the row menu for the task, as `.` does (rows-v2: the revealed More action). */
   more: (id: string, from: HTMLElement) => void
+  /** Shows or hides the task's details under its row (row-expand D4). */
+  expand: (id: string) => void
 }
 
-type ListRowProps = Omit<TaskRowProps, 'labels' | 'onToggle' | 'onOpen' | 'onTick' | 'onToggleCollapse' | 'onPointerDown' | 'dropKey' | 'actions' | 'onMore'> & {
+type ListRowProps = Omit<TaskRowProps, 'labels' | 'onToggle' | 'onOpen' | 'onTick' | 'onToggleCollapse' | 'onPointerDown' | 'dropKey' | 'actions' | 'onMore' | 'onExpand'> & {
   labelMap: Map<string, Label>
   /** The row can be picked up (to a sidebar project or label, ux-feedback-2 D4). */
   draggable: boolean
@@ -26,6 +28,8 @@ type ListRowProps = Omit<TaskRowProps, 'labels' | 'onToggle' | 'onOpen' | 'onTic
   reorderable: boolean
   /** Tree list: rows with children get the collapse chevron. */
   collapsible: boolean
+  /** The row can show its details under it (row-expand): list rows, not cards or departing rows. */
+  expandable: boolean
   handlers: RowActions
 }
 
@@ -34,7 +38,7 @@ type ListRowProps = Omit<TaskRowProps, 'labels' | 'onToggle' | 'onOpen' | 'onTic
  * list's maps, or the stable `handlers`, so moving the cursor re-renders only the
  * rows whose `selected` changed.
  */
-export const ListRow = memo(function ListRow({ task, labelMap, draggable, reorderable, collapsible, handlers: actions, ...rest }: ListRowProps) {
+export const ListRow = memo(function ListRow({ task, labelMap, draggable, reorderable, collapsible, expandable, handlers: actions, ...rest }: ListRowProps) {
   const labels = useMemo(() => resolveLabels(task.labels, labelMap), [task.labels, labelMap])
   return (
     <TaskRow
@@ -48,6 +52,7 @@ export const ListRow = memo(function ListRow({ task, labelMap, draggable, reorde
       onOpen={(e) => actions.open(task.id, e)}
       onTick={(range) => actions.tick(task.id, range)}
       onMore={(from) => actions.more(task.id, from)}
+      onExpand={expandable ? () => actions.expand(task.id) : undefined}
     />
   )
 })

@@ -1,5 +1,5 @@
 // Revealed row actions (OpenSpec change rows-v2, task-list-presentation "Revealed
-// row actions", design D7): Schedule, Priority and More at the row's right edge, in
+// row actions", design D7): Show details (row-expand D2), Schedule, Priority and More at the row's right edge, in
 // the place of the trailing group while the pointer is over the row or focus is
 // inside it. They are real buttons at all times (reachable by Tab, never hover-only);
 // CSS shows them only on a fine pointer from 768 px, and on touch they are not
@@ -23,8 +23,12 @@ function reveal(el: HTMLElement) {
   el.scrollIntoView?.({ block: 'nearest' })
 }
 
-export function RowActionCluster({ task, onMore, force = false }: {
+export function RowActionCluster({ task, onMore, force = false, editable = true, details }: {
   task: Task
+  /** The user may change the task: Schedule, Priority and More; a viewer's cluster has Show details only. */
+  editable?: boolean
+  /** Show details / Hide details (row-expand D2), when the row can expand. */
+  details?: { expanded: boolean; controls: string; onToggle: () => void }
   /** Opens the row menu, as `.` does; without it the cluster has no More button. */
   onMore?: (from: HTMLElement) => void
   /** Stories: shown as if hovered (the visual gate cannot hover). */
@@ -46,6 +50,13 @@ export function RowActionCluster({ task, onMore, force = false }: {
   return (
     <span data-row-actions="" onKeyDown={onKeyDown} onFocus={(e) => reveal(e.target as HTMLElement)}
       className={`absolute top-px right-1 hidden items-center gap-2 rounded-control border border-strong bg-pop px-0.5 shadow-2 transition-opacity duration-(--duration-ui) md:pointer-fine:flex ${shown}`}>
+      {details && (
+        <IconButton icon="chevron-down" size="sm" label={details.expanded ? t('Hide details') : t('Show details')}
+          shortcut={keysOf(details.expanded ? 'list.collapse' : 'list.expand')} aria-expanded={details.expanded}
+          aria-controls={details.expanded ? details.controls : undefined} data-row-action="details" onClick={details.onToggle}
+          className={details.expanded ? '[&_svg]:rotate-180' : undefined} />
+      )}
+      {editable && <>
       <IconButton ref={schedule} icon="calendar-days" size="sm" label={t('Schedule')} aria-haspopup="dialog" aria-expanded={scheduling}
         data-row-action="schedule" onClick={() => setScheduling(true)} />
       <Menu kind="menu" label={`${t('Priority')}: ${PRIORITY_TEXT[task.priority]}`} tip={t('Priority')} tipShortcut={keysOf('list.priority')} align="end"
@@ -57,6 +68,7 @@ export function RowActionCluster({ task, onMore, force = false }: {
         ))}
       </Menu>
       {onMore && <IconButton icon="ellipsis" size="sm" label={t('More actions')} shortcut={keysOf('list.actions')} data-row-action="more" onClick={(e) => onMore(e.currentTarget)} />}
+      </>}
       {scheduling && (
         <Suspense fallback={null}>
           <RowSchedule task={task} anchor={schedule} onClose={() => setScheduling(false)} />

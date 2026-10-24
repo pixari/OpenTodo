@@ -7,6 +7,7 @@ All notable changes to OpenTodo are documented here. The format follows [Keep a 
 ### Added
 
 - **Shell completion for `ot`.** `ot completion bash`, `ot completion zsh` or `ot completion fish` prints a script; install it once and Tab completes commands, flags and fixed values, plus project, label and workspace names, open task ids with their titles, and `#project` and `@label` in `ot add`, read from your profile's server. Offline it still completes commands and flags and prints nothing into your prompt. ([Shell completion](docs/cli.md#shell-completion))
+- **Expand a row in place.** Select a task and press <kbd>→</kbd>, choose **Show details** in the row's actions, or tap the arrow at the end of a row on a phone: the task's notes (with **Show more**), its dates, project, priority, estimate, labels, assignee and what it waits for, its subtasks and its comment and attachment counts open under the row, without leaving the list. Tick subtasks right there; <kbd>←</kbd> or <kbd>Esc</kbd> closes the details again. One row at a time, in lists and views (not on boards). ([Expand a row](docs/expand-a-row.md))
 
 ## [0.11.0] - 2026-10-24
 

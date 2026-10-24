@@ -500,7 +500,6 @@
   "Collapse or expand the sidebar (from 1024 px)": "Réduire ou développer la barre latérale (à partir de 1024 px)",
   "Collapse sidebar": "Réduire la barre latérale",
   "Collapse subtasks": "Réduire les sous-tâches",
-  "Collapse the subtasks of the selected task (or go to its parent), or the sub-projects of the focused sidebar project": "Réduire les sous-tâches de la tâche sélectionnée (ou aller à sa tâche parente), ou les sous-projets du projet actif de la barre latérale",
   "Collapse {name}": "Réduire {name}",
   "Collection URL": "URL de la collection",
   "Colour": "Couleur",
@@ -1031,7 +1030,6 @@
   "Expand all": "Tout développer",
   "Expand sidebar": "Développer la barre latérale",
   "Expand subtasks": "Développer les sous-tâches",
-  "Expand the subtasks of the selected task, or the sub-projects of the focused sidebar project": "Développer les sous-tâches de la tâche sélectionnée, ou les sous-projets du projet actif de la barre latérale",
   "Expand {name}": "Développer {name}",
   "Expected \"&\" or \"|\" before \"{before}\" at position {pos}": "« & » ou « | » attendu avant « {before} », à la position {pos}",
   "Expected \"&\", \"|\" or \")\" before \"{before}\" at position {pos}": "« & », « | » ou « ) » attendu avant « {before} », à la position {pos}",
@@ -5257,5 +5255,11 @@
   "{enter} applies, {esc} discards. Each change shows in its task’s history.": "{enter} applique, {esc} abandonne. Chaque changement apparaît dans l’historique de sa tâche.",
   "{n, plural, one {# selected task} other {# selected tasks}}": "{n, plural, one {# tâche sélectionnée} other {# tâches sélectionnées}}",
   "{n, plural, one {Apply # change} other {Apply # changes}}": "{n, plural, one {Appliquer # changement} other {Appliquer # changements}}",
-  "More properties": "Plus de propriétés"
+  "More properties": "Plus de propriétés",
+  "Details of {title}": "Détails de {title}",
+  "Hide details": "Masquer les détails",
+  "Show details": "Afficher les détails",
+  "Open task": "Ouvrir la tâche",
+  "Show the details of the selected task under its row (unfold its subtasks first when they are folded), or the sub-projects of the focused sidebar project": "Afficher les détails de la tâche sélectionnée sous sa ligne (déplie d’abord ses sous-tâches si elles sont repliées), ou les sous-projets du projet ciblé dans la barre latérale",
+  "Hide the details of the selected task, else fold its subtasks (or go to its parent), or the sub-projects of the focused sidebar project": "Masquer les détails de la tâche sélectionnée, sinon replier ses sous-tâches (ou aller à la tâche parente), ou les sous-projets du projet ciblé dans la barre latérale"
 }

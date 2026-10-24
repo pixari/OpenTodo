@@ -41,6 +41,8 @@ export interface BindingContext {
   projectReadOnly: boolean
   /** A click on a row's title edits it in place when it applies (inline-task-editing D1); true when it did. */
   startInline?: (id: string, e?: React.MouseEvent) => boolean
+  /** The row whose details are shown (row-expand D4): one per list, closed when the list changes. */
+  setExpandedId: (update: (id: string | null) => string | null) => void
 }
 
 export function useListBindings(c: BindingContext): RowActions {
@@ -59,6 +61,7 @@ export function useListBindings(c: BindingContext): RowActions {
     ui.setAddingTo(null)
     c.selection.clear()
     c.setSelectMode(false)
+    c.setExpandedId(() => null)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a route change resets the list; selection is a new object on every row change
   }, [route])
   useEffect(() => openTask.subscribe((id) => {
@@ -159,6 +162,11 @@ export function useListBindings(c: BindingContext): RowActions {
     more: (id, from) => {
       setSelectedId(id)
       live.current.ui.openActions(null, from)
+    },
+    // Show details / the row's disclosure (row-expand D4): one row at a time, and the cursor goes with it.
+    expand: (id) => {
+      setSelectedId(id)
+      live.current.setExpandedId((cur) => (cur === id ? null : id))
     },
   }), [setSelectedId])
 }
