@@ -28,6 +28,16 @@ export interface AssistantOwnerSettings {
   member_providers?: ProviderName[]
   /** Accounts whose turns use their own provider and key. */
   own_key_members?: number
+  /** The on-device assistant for encrypted accounts (assistant-on-device D2). */
+  device?: DeviceSettings
+  /** The API origin of each built-in provider (what the page's policy adds). */
+  device_origins?: Record<string, string>
+}
+
+export interface DeviceSettings {
+  enabled: boolean
+  providers: ProviderName[]
+  origins: string[]
 }
 
 /** What a member reads from the same route. */
@@ -49,6 +59,7 @@ export interface AssistantSettingsInput {
   monthly_token_cap_per_user?: number
   allow_private_endpoint?: boolean
   cap_member_keys?: boolean
+  device?: DeviceSettings
   /** A value sets the key, "" clears it, absent keeps it. */
   keys?: Partial<Record<ProviderName, string>>
 }

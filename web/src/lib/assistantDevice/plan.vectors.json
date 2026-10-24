@@ -1,0 +1,803 @@
+{
+  "user": "u1",
+  "today": "2026-10-12",
+  "rows": {
+    "label": [
+      {
+        "color": "#dc2626",
+        "created_at": 1,
+        "deleted_at": null,
+        "id": "l1",
+        "name": "urgent",
+        "position": 1
+      }
+    ],
+    "project": [
+      {
+        "archived": false,
+        "color": "#2563eb",
+        "created_at": 1,
+        "deleted_at": null,
+        "id": "p1",
+        "name": "Work",
+        "parent_id": null,
+        "position": 1
+      },
+      {
+        "archived": false,
+        "color": "#16a34a",
+        "created_at": 1,
+        "deleted_at": null,
+        "id": "p2",
+        "name": "Home",
+        "parent_id": null,
+        "position": 2
+      }
+    ],
+    "section": [
+      {
+        "created_at": 1,
+        "deleted_at": null,
+        "id": "s1",
+        "name": "Backlog",
+        "position": 1,
+        "project_id": "p1"
+      }
+    ],
+    "task": [
+      {
+        "completed_at": null,
+        "created_at": 1,
+        "deleted_at": null,
+        "description": "",
+        "due": {
+          "date": "2026-10-10"
+        },
+        "id": "t1",
+        "labels": [
+          "l1"
+        ],
+        "parent_id": null,
+        "position": 1,
+        "priority": 2,
+        "project_id": "p1",
+        "title": "Write report"
+      },
+      {
+        "completed_at": null,
+        "created_at": 1,
+        "deleted_at": null,
+        "description": "",
+        "due": {
+          "date": "2026-10-12",
+          "time": "09:00"
+        },
+        "id": "t2",
+        "labels": [],
+        "parent_id": null,
+        "position": 2,
+        "priority": 4,
+        "project_id": "p2",
+        "title": "Call plumber"
+      },
+      {
+        "completed_at": null,
+        "created_at": 1,
+        "deleted_at": null,
+        "description": "",
+        "due": null,
+        "id": "t3",
+        "labels": [],
+        "parent_id": null,
+        "position": 3,
+        "priority": 4,
+        "project_id": null,
+        "title": "Buy milk"
+      },
+      {
+        "completed_at": 1700000000000,
+        "created_at": 1,
+        "deleted_at": null,
+        "description": "",
+        "due": null,
+        "id": "t4",
+        "labels": [],
+        "parent_id": null,
+        "position": 4,
+        "priority": 4,
+        "project_id": "p2",
+        "title": "Old task"
+      },
+      {
+        "completed_at": null,
+        "created_at": 1,
+        "deleted_at": null,
+        "description": "",
+        "due": {
+          "date": "2026-10-12"
+        },
+        "id": "t5",
+        "labels": [],
+        "parent_id": null,
+        "position": 5,
+        "priority": 4,
+        "project_id": "p2",
+        "recurrence": "every day",
+        "title": "Water plants"
+      },
+      {
+        "completed_at": null,
+        "created_at": 1,
+        "deleted_at": null,
+        "description": "",
+        "due": null,
+        "id": "t6",
+        "labels": [],
+        "parent_id": "t1",
+        "position": 6,
+        "priority": 4,
+        "project_id": "p1",
+        "title": "Draft outline"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "schedule keeps the time",
+      "tool": "schedule_tasks",
+      "args": {
+        "due": {
+          "date": "2026-10-16"
+        },
+        "ids": [
+          "t1",
+          "t2"
+        ]
+      },
+      "changes": [
+        {
+          "base": {
+            "due": {
+              "date": "2026-10-10"
+            }
+          },
+          "entity": "task",
+          "entityId": "t1",
+          "patch": {
+            "due": {
+              "date": "2026-10-16"
+            }
+          }
+        },
+        {
+          "base": {
+            "due": {
+              "date": "2026-10-12",
+              "time": "09:00"
+            }
+          },
+          "entity": "task",
+          "entityId": "t2",
+          "patch": {
+            "due": {
+              "date": "2026-10-16",
+              "time": "09:00"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "schedule clears",
+      "tool": "schedule_tasks",
+      "args": {
+        "due": null,
+        "ids": [
+          "t2"
+        ]
+      },
+      "changes": [
+        {
+          "base": {
+            "due": {
+              "date": "2026-10-12",
+              "time": "09:00"
+            }
+          },
+          "entity": "task",
+          "entityId": "t2",
+          "patch": {
+            "due": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "schedule unknown task",
+      "tool": "schedule_tasks",
+      "args": {
+        "due": {
+          "date": "2026-10-16"
+        },
+        "ids": [
+          "nope"
+        ]
+      },
+      "error": "not_found"
+    },
+    {
+      "name": "schedule bad date",
+      "tool": "schedule_tasks",
+      "args": {
+        "due": {
+          "date": "2026-02-30"
+        },
+        "ids": [
+          "t1"
+        ]
+      },
+      "error": "invalid_arguments"
+    },
+    {
+      "name": "complete",
+      "tool": "complete_tasks",
+      "args": {
+        "ids": [
+          "t3",
+          "t4"
+        ],
+        "timezone": "UTC"
+      },
+      "changes": [
+        {
+          "base": {
+            "completed_at": null
+          },
+          "entity": "task",
+          "entityId": "t3",
+          "patch": {
+            "completed_at": "<ts>"
+          }
+        }
+      ]
+    },
+    {
+      "name": "complete recurring",
+      "tool": "complete_tasks",
+      "args": {
+        "ids": [
+          "t5"
+        ],
+        "timezone": "UTC"
+      },
+      "changes": [
+        {
+          "create": true,
+          "entity": "task",
+          "entityId": "b0670d1d-f322-8452-a104-fb950bc6c791",
+          "patch": {
+            "completed_at": "<ts>",
+            "created_at": "<ts>",
+            "deleted_at": null,
+            "description": "",
+            "due": {
+              "date": "2026-10-12"
+            },
+            "labels": [],
+            "parent_id": null,
+            "position": 5,
+            "priority": 4,
+            "project_id": "p2",
+            "recurrence": null,
+            "series_id": "t5",
+            "title": "Water plants"
+          }
+        },
+        {
+          "base": {
+            "due": {
+              "date": "2026-10-12"
+            }
+          },
+          "entity": "task",
+          "entityId": "t5",
+          "patch": {
+            "due": {
+              "date": "2026-10-13"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reopen",
+      "tool": "reopen_tasks",
+      "args": {
+        "ids": [
+          "t4",
+          "t3"
+        ]
+      },
+      "changes": [
+        {
+          "base": {
+            "completed_at": 1700000000000
+          },
+          "entity": "task",
+          "entityId": "t4",
+          "patch": {
+            "completed_at": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "move to a section",
+      "tool": "move_tasks",
+      "args": {
+        "ids": [
+          "t3"
+        ],
+        "project_id": "p1",
+        "section_id": "s1"
+      },
+      "changes": [
+        {
+          "base": {
+            "project_id": null,
+            "section_id": null
+          },
+          "entity": "task",
+          "entityId": "t3",
+          "patch": {
+            "project_id": "p1",
+            "section_id": "s1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "move subtask without parent",
+      "tool": "move_tasks",
+      "args": {
+        "ids": [
+          "t6"
+        ],
+        "project_id": "p2"
+      },
+      "changes": [
+        {
+          "base": {
+            "parent_id": "t1",
+            "project_id": "p1"
+          },
+          "entity": "task",
+          "entityId": "t6",
+          "patch": {
+            "parent_id": null,
+            "project_id": "p2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "move to the inbox",
+      "tool": "move_tasks",
+      "args": {
+        "ids": [
+          "t2"
+        ],
+        "project_id": null
+      },
+      "changes": [
+        {
+          "base": {
+            "project_id": "p2"
+          },
+          "entity": "task",
+          "entityId": "t2",
+          "patch": {
+            "project_id": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "move section of another project",
+      "tool": "move_tasks",
+      "args": {
+        "ids": [
+          "t3"
+        ],
+        "project_id": "p2",
+        "section_id": "s1"
+      },
+      "error": "invalid_arguments"
+    },
+    {
+      "name": "update planning fields",
+      "tool": "update_tasks",
+      "args": {
+        "updates": [
+          {
+            "deadline": "2026-10-20",
+            "estimate_minutes": 45,
+            "evening": true,
+            "id": "t1",
+            "labels": [],
+            "priority": 1,
+            "start": "someday"
+          }
+        ]
+      },
+      "changes": [
+        {
+          "base": {
+            "deadline": null,
+            "estimate_minutes": null,
+            "evening": null,
+            "labels": [
+              "l1"
+            ],
+            "priority": 2,
+            "start": null
+          },
+          "entity": "task",
+          "entityId": "t1",
+          "patch": {
+            "deadline": "2026-10-20",
+            "estimate_minutes": 45,
+            "evening": true,
+            "labels": [],
+            "priority": 1,
+            "start": "someday"
+          }
+        }
+      ]
+    },
+    {
+      "name": "update labels by name and blockers",
+      "tool": "update_tasks",
+      "args": {
+        "updates": [
+          {
+            "blocked_by": [
+              "t2",
+              "t2"
+            ],
+            "id": "t3",
+            "labels": [
+              "URGENT"
+            ],
+            "title": "  Buy oat milk "
+          }
+        ]
+      },
+      "changes": [
+        {
+          "base": {
+            "blocked_by": null,
+            "labels": [],
+            "title": "Buy milk"
+          },
+          "entity": "task",
+          "entityId": "t3",
+          "patch": {
+            "blocked_by": [
+              "t2"
+            ],
+            "labels": [
+              "l1"
+            ],
+            "title": "Buy oat milk"
+          }
+        }
+      ]
+    },
+    {
+      "name": "update unknown label",
+      "tool": "update_tasks",
+      "args": {
+        "updates": [
+          {
+            "id": "t3",
+            "labels": [
+              "later"
+            ]
+          }
+        ]
+      },
+      "error": "invalid_arguments"
+    },
+    {
+      "name": "update nothing",
+      "tool": "update_tasks",
+      "args": {
+        "updates": [
+          {
+            "id": "t3"
+          }
+        ]
+      },
+      "error": "invalid_arguments"
+    },
+    {
+      "name": "create",
+      "tool": "create_tasks",
+      "args": {
+        "items": [
+          {
+            "blocked_by": [
+              "t2"
+            ],
+            "due": {
+              "date": "2026-10-13",
+              "time": "18:30"
+            },
+            "estimate_minutes": 30,
+            "id": "0b7c6f1e-2f43-4c55-9b7a-3f1f1e1a2b3c",
+            "labels": [
+              "urgent"
+            ],
+            "priority": 2,
+            "project_id": "p2",
+            "start": "2026-10-13",
+            "title": "Plan trip"
+          },
+          {
+            "deadline": "2026-10-14",
+            "description": "Bags",
+            "evening": true,
+            "id": "5d0e4b1c-8a3f-4e2b-9c1d-7e6f5a4b3c2d",
+            "title": "Pack"
+          }
+        ]
+      },
+      "changes": [
+        {
+          "create": true,
+          "entity": "task",
+          "entityId": "0b7c6f1e-2f43-4c55-9b7a-3f1f1e1a2b3c",
+          "patch": {
+            "blocked_by": [
+              "t2"
+            ],
+            "completed_at": null,
+            "created_at": "<ts>",
+            "deleted_at": null,
+            "description": "",
+            "due": {
+              "date": "2026-10-13",
+              "time": "18:30"
+            },
+            "estimate_minutes": 30,
+            "labels": [
+              "l1"
+            ],
+            "parent_id": null,
+            "position": "<ts>",
+            "priority": 2,
+            "project_id": "p2",
+            "start": "2026-10-13",
+            "title": "Plan trip"
+          }
+        },
+        {
+          "create": true,
+          "entity": "task",
+          "entityId": "5d0e4b1c-8a3f-4e2b-9c1d-7e6f5a4b3c2d",
+          "patch": {
+            "completed_at": null,
+            "created_at": "<ts>",
+            "deadline": "2026-10-14",
+            "deleted_at": null,
+            "description": "Bags",
+            "due": null,
+            "evening": true,
+            "labels": [],
+            "parent_id": null,
+            "position": "<ts>",
+            "priority": 4,
+            "project_id": null,
+            "title": "Pack"
+          }
+        }
+      ]
+    },
+    {
+      "name": "create with a parent from the same call",
+      "tool": "create_tasks",
+      "args": {
+        "items": [
+          {
+            "due": {
+              "date": "2026-10-13"
+            },
+            "estimate_minutes": 30,
+            "id": "0b7c6f1e-2f43-4c55-9b7a-3f1f1e1a2b3c",
+            "labels": [
+              "urgent"
+            ],
+            "priority": 2,
+            "project_id": "p2",
+            "title": "Plan trip"
+          },
+          {
+            "deadline": "2026-10-14",
+            "id": "5d0e4b1c-8a3f-4e2b-9c1d-7e6f5a4b3c2d",
+            "parent_id": "0b7c6f1e-2f43-4c55-9b7a-3f1f1e1a2b3c",
+            "title": "Pack"
+          }
+        ]
+      },
+      "error": "not_found"
+    },
+    {
+      "name": "create subtask takes parent project",
+      "tool": "create_tasks",
+      "args": {
+        "items": [
+          {
+            "id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "parent_id": "t1",
+            "title": "Find sources"
+          }
+        ]
+      },
+      "changes": [
+        {
+          "create": true,
+          "entity": "task",
+          "entityId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+          "patch": {
+            "completed_at": null,
+            "created_at": "<ts>",
+            "deleted_at": null,
+            "description": "",
+            "due": null,
+            "labels": [],
+            "parent_id": "t1",
+            "position": "<ts>",
+            "priority": 4,
+            "project_id": "p1",
+            "title": "Find sources"
+          }
+        }
+      ]
+    },
+    {
+      "name": "create in unknown project",
+      "tool": "create_tasks",
+      "args": {
+        "items": [
+          {
+            "project_id": "nope",
+            "title": "X"
+          }
+        ]
+      },
+      "error": "not_found"
+    },
+    {
+      "name": "create without title",
+      "tool": "create_tasks",
+      "args": {
+        "items": [
+          {
+            "title": "  "
+          }
+        ]
+      },
+      "error": "invalid_arguments"
+    },
+    {
+      "name": "label exists",
+      "tool": "create_label",
+      "args": {
+        "name": "Urgent"
+      }
+    },
+    {
+      "name": "new label",
+      "tool": "create_label",
+      "args": {
+        "color": "#AABBCC",
+        "name": "Errands"
+      },
+      "changes": [
+        {
+          "create": true,
+          "entity": "label",
+          "entityId": "<new>",
+          "patch": {
+            "color": "#aabbcc",
+            "created_at": "<ts>",
+            "deleted_at": null,
+            "name": "Errands",
+            "position": "<ts>"
+          }
+        }
+      ]
+    },
+    {
+      "name": "new project",
+      "tool": "create_project",
+      "args": {
+        "name": " Garden ",
+        "parent_id": "p2"
+      },
+      "changes": [
+        {
+          "create": true,
+          "entity": "project",
+          "entityId": "<new>",
+          "patch": {
+            "archived": false,
+            "color": "#64748b",
+            "created_at": "<ts>",
+            "deleted_at": null,
+            "name": "Garden",
+            "parent_id": "p2",
+            "position": "<ts>"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bad colour",
+      "tool": "create_project",
+      "args": {
+        "color": "red",
+        "name": "Garden"
+      },
+      "error": "invalid_arguments"
+    },
+    {
+      "name": "comment",
+      "tool": "add_comment",
+      "args": {
+        "body": "Looks good",
+        "task_id": "t1"
+      },
+      "changes": [
+        {
+          "create": true,
+          "entity": "comment",
+          "entityId": "<new>",
+          "patch": {
+            "author_id": "u1",
+            "body": "Looks good",
+            "created_at": "<ts>",
+            "deleted_at": null,
+            "edited_at": null,
+            "mentions": [],
+            "parent_id": null,
+            "task_id": "t1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "trash a task the proposal did not create",
+      "tool": "trash_tasks",
+      "args": {
+        "ids": [
+          "t3"
+        ]
+      },
+      "error": "not_permitted"
+    },
+    {
+      "name": "unknown argument",
+      "tool": "complete_tasks",
+      "args": {
+        "ids": [
+          "t3"
+        ],
+        "now": true
+      },
+      "error": "invalid_arguments"
+    }
+  ],
+  "_comment": "Generated by go test ./internal/assistant -run DevicePlanVectors -update. Timestamps read <ts>; ids the planner chose read <new>."
+}

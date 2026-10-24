@@ -60,9 +60,9 @@ Each answer shows its tokens and its share of your monthly allowance; answers on
 
 You confirm every change, the assistant cannot touch sharing, members, settings or tokens, and text in tasks is treated as data, not instructions. See [Safety](assistant-skills.md#safety).
 
-## End-to-end encrypted accounts
+## On encrypted accounts
 
-With end-to-end encryption on, the assistant is not available: the server holds no key to your tasks. See [End-to-end encrypted accounts](assistant-privacy.md#end-to-end-encrypted-accounts).
+With end-to-end encryption on, the assistant can run on your own device with your own key, if the owner allows it. See [Assistant on encrypted accounts](assistant-encrypted.md).
 
 ## Demo instance
 

@@ -550,6 +550,19 @@ const shots = [
     const main = await p.locator('main').boundingBox(); const top = await h.boundingBox()
     return { x: main.x, y: Math.max(0, top.y - 20), width: main.width, height: 560 }
   } },
+  // The owner's switch for the on-device assistant of encrypted accounts (assistant-on-device), not saved.
+  { name: 'assistant-device-owner', server: 'assistant', async run(p) {
+    await go(p, assistantBase, '/settings/integrations', () => p.getByRole('heading', { name: 'Integrations', level: 1 }).waitFor())
+    await p.locator('[data-assistant-owner]').getByRole('button', { name: 'Configure' }).click()
+    const group = p.locator('[data-assistant-group="device"]'); await group.waitFor()
+    await group.getByLabel('Let encrypted accounts use the assistant from their own device').check()
+    await group.getByLabel('Anthropic (Claude)').check()
+    await group.getByLabel(/^A model server/).check()
+    await group.locator('textarea').fill('http://localhost:11434')
+    await group.evaluate((el) => el.scrollIntoView({ block: 'center' })); await settle(p, 400)
+    const box = await group.boundingBox()
+    return { x: Math.max(0, box.x - 24), y: Math.max(0, box.y - 24), width: box.width + 48, height: box.height + 48 }
+  } },
 ]
 
 // ------------------------------------------------------------------ run

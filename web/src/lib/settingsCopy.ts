@@ -506,6 +506,8 @@ export const SETTINGS_COPY = {
       providers: { label: msg('Providers allowed') },
       cap: { label: msg('Monthly tokens per person') },
       memberKeys: { label: msg('Members’ own keys') },
+      device: { label: msg('Encrypted accounts'), description: msg('The assistant on the person’s own device, with their own key.') },
+      thisDevice: { label: msg('On this device'), description: msg('Provider and key kept in this browser only.') },
       yours: { label: msg('Your assistant') },
       usage: { label: msg('Usage') },
       auto: { label: msg('Small changes without review'), description: msg('This device: up to 3 existing tasks, done, dates, priority or labels. Undo appears.') },

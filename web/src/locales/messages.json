@@ -284,6 +284,9 @@
   "A microphone in quick add, or {kbd}; nothing is saved until you press Enter.": [
     "web/src/lib/settingsCopy.ts"
   ],
+  "A model server (Ollama, LM Studio, …)": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "A name has at most {n} characters.": [
     "web/src/lib/fields.ts"
   ],
@@ -483,6 +486,9 @@
   "API key (if the endpoint needs one)": [
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
+  "API key (if the server needs one)": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "API token created": [
     "web/src/app/auditFormat.ts"
   ],
@@ -520,6 +526,7 @@
   ],
   "Accepted": [
     "web/src/app/MembersPanel.tsx",
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "Accepting an invitation needs a connection to the server. The page will retry when the network returns.": [
@@ -1090,6 +1097,9 @@
     "web/src/app/AgentAccessRow.tsx",
     "web/src/app/NotificationsSettings.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
+  ],
+  "Allowed by the server owner: {origins}.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Allowed, counted toward the limit": [
     "web/src/app/assistant/AssistantSettings.tsx"
@@ -1946,6 +1956,7 @@
     "web/src/app/UsersPanel.tsx",
     "web/src/app/VoiceSettings.tsx",
     "web/src/app/WebhooksPanel.tsx",
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx",
     "web/src/app/filter/ConditionEditor.tsx",
     "web/src/app/focus/FocusParts.tsx",
@@ -1998,6 +2009,7 @@
   ],
   "Change": [
     "web/src/app/DigestCard.tsx",
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/task-detail/ZoneControl.tsx",
     "web/src/page/TaskPageScreen.tsx"
   ],
@@ -2018,6 +2030,9 @@
   ],
   "Change picture": [
     "web/src/app/profile/ProfileSection.tsx"
+  ],
+  "Change provider or key": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Change settings": [
     "web/src/app/BackupsPanel.tsx"
@@ -2710,6 +2725,9 @@
   ],
   "Connection name": [
     "web/src/app/IssueEditor.tsx"
+  ],
+  "Connection works.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Connection works. Save to use these settings.": [
     "web/src/app/assistant/AssistantSettings.tsx"
@@ -4016,6 +4034,9 @@
     "web/src/app/locations/PlacesView.tsx",
     "web/src/lib/locations.ts"
   ],
+  "Encrypted accounts": [
+    "web/src/lib/settingsCopy.ts"
+  ],
   "Encrypted image": [
     "web/src/app/Markdown.tsx"
   ],
@@ -4095,6 +4116,9 @@
   "Enter a model id to test": [
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
+  "Enter a model id: letters, digits, dots, dashes, underscores or colons.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "Enter a number.": [
     "web/src/lib/fields.ts"
   ],
@@ -4124,6 +4148,9 @@
   ],
   "Enter the email address of your account. We will send you a link to choose a new password.": [
     "web/src/app/EmailScreens.tsx"
+  ],
+  "Enter the model server’s address, such as http://localhost:11434/v1.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Enter the six-digit code from your authenticator app.": [
     "web/src/app/AuthScreen.tsx"
@@ -5940,6 +5967,9 @@
     "web/src/app/assistant/ChangeSetReview.tsx",
     "web/src/app/bulk/UndoToast.tsx"
   ],
+  "Kept only in this browser: never synced, never sent to the OpenTodo server, deleted when you sign out. The app’s page on this device can read it.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "Kept until you delete them permanently": [
     "web/src/app/TrashView.tsx"
   ],
@@ -6216,6 +6246,9 @@
   ],
   "Let calendar apps sync with this server.": [
     "web/src/lib/settingsCopy.ts"
+  ],
+  "Let encrypted accounts use the assistant from their own device": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Let members bring their own key": [
     "web/src/app/assistant/AssistantSettings.tsx"
@@ -6705,11 +6738,18 @@
   ],
   "Model": [
     "web/src/app/SpeechServerPanel.tsx",
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "Model server": [
     "web/src/app/assistant/AssistantPage.tsx",
     "web/src/app/assistant/AssistantPanel.tsx"
+  ],
+  "Model server address": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
+  "Model server addresses": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Mon": [
     "web/src/app/rules/RuleFields.tsx"
@@ -7674,10 +7714,14 @@
     "web/src/lib/fields.ts"
   ],
   "Not accepted yet": [
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "Not allowed.": [
     "web/src/app/assistant/AssistantSettings.tsx"
+  ],
+  "Not an address: {list}": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Not asked yet": [
     "web/src/app/NotificationsSettings.tsx"
@@ -7759,6 +7803,9 @@
   ],
   "Not sent: the account uses end-to-end encryption": [
     "web/src/app/DigestCard.tsx"
+  ],
+  "Not set up on this device yet.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Not set.": [
     "web/src/app/BackupsPanel.tsx"
@@ -8010,6 +8057,9 @@
   "Off (manual backups only)": [
     "web/src/app/BackupsPanel.tsx"
   ],
+  "Off by default. The server cannot read encrypted tasks, so the person’s browser calls the provider directly with the person’s own key. Your keys are never used or sent to a browser. Pages of this server may then connect to the providers you allow here.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "Off by default. While off, no one sees it and the server contacts no model provider. Each person still has to accept what is sent before their first message.": [
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
@@ -8045,6 +8095,9 @@
   ],
   "Off: reminders read \"Reminder\" until you open the app. Never with encryption.": [
     "web/src/lib/settingsCopy.ts"
+  ],
+  "Off: the assistant is not available to encrypted accounts.": [
+    "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "Off: the owner has not turned it on": [
     "web/src/app/assistant/AssistantSettings.tsx"
@@ -8171,6 +8224,9 @@
   "On for everyone": [
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
+  "On for your account, from your own device": [
+    "web/src/app/assistant/AssistantSettings.tsx"
+  ],
   "On iPhone and iPad, push works only in the app installed to the Home Screen: check Settings → Notifications → OpenTodo, and Focus.": [
     "web/src/lib/push.ts"
   ],
@@ -8180,6 +8236,12 @@
   "On the deadline": [
     "web/src/lib/relativeDoOn.ts",
     "web/src/lib/reminderTime.ts"
+  ],
+  "On their own device: {providers}.": [
+    "web/src/app/assistant/AssistantSettings.tsx"
+  ],
+  "On this device": [
+    "web/src/lib/settingsCopy.ts"
   ],
   "On this page": [
     "web/src/app/help/HelpView.tsx"
@@ -8206,6 +8268,9 @@
   "On, {weekday}s at {hour} ({zone})": [
     "web/src/app/DigestCard.tsx"
   ],
+  "On-device assistant for encrypted accounts": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "Once a day": [
     "web/src/app/IssueEditor.tsx"
   ],
@@ -8227,6 +8292,9 @@
   ],
   "One next step|method": [
     "web/src/lib/method/vocabulary.json"
+  ],
+  "One origin per line, at most 10: https://host[:port], or http://localhost:port for a model on the person’s own computer.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "One per device, so you can revoke a lost phone without touching the others. They only work for CalDAV.": [
     "web/src/app/CaldavPanel.tsx"
@@ -8257,6 +8325,9 @@
   ],
   "Only people who already have an account on this server can use it. The server owner can let members invite new people in Settings → People.": [
     "web/src/app/InviteLinksSection.tsx"
+  ],
+  "Only the addresses you list below.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Only the owner and admins can change the name, colour and icon.": [
     "web/src/app/WorkspaceGeneral.tsx"
@@ -8774,6 +8845,9 @@
   ],
   "Paste the key": [
     "web/src/app/assistant/AssistantSettings.tsx"
+  ],
+  "Paste your API key for this provider.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Paste your Pushover user key.": [
     "web/src/app/NotificationChannelEditor.tsx"
@@ -9314,7 +9388,11 @@
   ],
   "Provider": [
     "web/src/app/IssueEditor.tsx",
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
+  ],
+  "Provider and key kept in this browser only.": [
+    "web/src/lib/settingsCopy.ts"
   ],
   "Provider everyone uses": [
     "web/src/app/assistant/AssistantSettings.tsx"
@@ -9327,6 +9405,9 @@
   ],
   "Provider reachable: sign-in at {authHost}, tokens from {tokenHost}, provider sign-out supported.": [
     "web/src/app/SsoPanel.tsx"
+  ],
+  "Provider: <strong>{provider}</strong>{model}, called from this device with your own key.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Provider: <strong>{provider}</strong>{model}, with your own key.": [
     "web/src/app/assistant/AssistantSettings.tsx"
@@ -9659,6 +9740,9 @@
   ],
   "Remove filter: {name}": [
     "web/src/app/AuditPanel.tsx"
+  ],
+  "Remove from this device": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Remove label {name}": [
     "web/src/ui/Chips.tsx"
@@ -10322,6 +10406,9 @@
   "Save name": [
     "web/src/page/TaskPageScreen.tsx"
   ],
+  "Save on this device": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "Save options": [
     "web/src/app/FieldsDialog.tsx"
   ],
@@ -10756,8 +10843,14 @@
   "Set the priority of the selected task, or of the ticked tasks": [
     "web/src/lib/shortcuts.ts"
   ],
+  "Set up": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "Set up encryption": [
     "web/src/app/EncryptionPanel.tsx"
+  ],
+  "Set up the assistant on this device": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Set up two-factor authentication": [
     "web/src/app/TwoFactorPanel.tsx"
@@ -11839,6 +11932,7 @@
   ],
   "Test connection": [
     "web/src/app/SsoPanel.tsx",
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "Test delivered.": [
@@ -12011,6 +12105,12 @@
   ],
   "The assistant needs a connection.": [
     "web/src/app/assistant/AssistantPanelBody.tsx"
+  ],
+  "The assistant on the person’s own device, with their own key.": [
+    "web/src/lib/settingsCopy.ts"
+  ],
+  "The assistant reads your tasks on this device, and they are encrypted until you unlock it with your passphrase.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "The background worker that receives pushes is running.": [
     "web/src/lib/push.ts"
@@ -12257,6 +12357,9 @@
   "The provider refused the token. Enter a new one.": [
     "web/src/app/IssuesPanel.tsx"
   ],
+  "The provider rejected the API key saved on this device. Change it with “Change provider or key” or in Settings → Integrations → Assistant.": [
+    "web/src/lib/assistant.ts"
+  ],
   "The provider sent more than 2 MB at once.": [
     "web/src/app/IssuesPanel.tsx"
   ],
@@ -12409,11 +12512,20 @@
   "The server operator has not enabled email to task. See docs/email.md to set it up.": [
     "web/src/lib/settingsCopy.ts"
   ],
+  "The server owner allows no provider on devices.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "The server owner changed the model provider.": [
     "web/src/app/assistant/AssistantConsent.tsx"
   ],
   "The server owner closed sign-up after you registered, so no account was created.": [
     "web/src/app/EmailScreens.tsx"
+  ],
+  "The server owner does not allow this address. Allowed: {origins}.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
+  "The server owner does not allow this provider on devices.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "The server owner has enabled AI assistant access (read-only). Your assistant sees only your own projects and the shared projects you are a member of.": [
     "web/src/app/AssistantsPanel.tsx"
@@ -12972,6 +13084,9 @@
   "This page cannot be opened without the full link": [
     "web/src/page/TaskPageScreen.tsx"
   ],
+  "This page could not reach the provider. If the server owner allowed it a moment ago, reload the page. A model server must also allow requests from this app’s address.": [
+    "web/src/lib/assistant.ts"
+  ],
   "This page expired. Reload it and try again.": [
     "web/src/lib/demo.ts"
   ],
@@ -13324,6 +13439,9 @@
   ],
   "To answer, the assistant sends what you type and the task data it needs to <strong>{provider}</strong>{model}. Your server owner chose it. Nothing is sent before you accept.": [
     "web/src/app/assistant/AssistantConsent.tsx"
+  ],
+  "To answer, this device sends what you type and the task data it needs <strong>directly to {provider}</strong>{model}, with your own key. The OpenTodo server sees none of it. Nothing is sent before you accept.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "To do on {date}": [
     "web/src/page/TaskPageScreen.tsx"
@@ -13862,6 +13980,9 @@
   ],
   "Unlock this device to turn it on.": [
     "web/src/app/RelaySettings.tsx"
+  ],
+  "Unlock this device to use the assistant.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Unlock with fingerprint or face": [
     "web/src/app/UnlockScreen.tsx"
@@ -14445,6 +14566,7 @@
     "web/src/lib/settingsCopy.ts"
   ],
   "Withdraw consent": [
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "Within days": [
@@ -14729,11 +14851,17 @@
   "You:": [
     "web/src/app/assistant/AssistantPanelBody.tsx"
   ],
+  "Your API key": [
+    "web/src/app/assistant/AssistantDevice.tsx"
+  ],
   "Your API key for {provider}": [
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "Your OpenTodo server never receives audio or transcripts. Only the task you save with Enter is stored and synced, like a typed one.": [
     "web/src/app/VoiceSettings.tsx"
+  ],
+  "Your account is end-to-end encrypted, so the server cannot read your tasks. This device can: it sends what a question needs directly to the provider you choose, with your own key. The OpenTodo server sees none of it.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Your account is end-to-end encrypted: while the request runs, the phrase and its text are readable by this server and the speech service.": [
     "web/src/app/VoiceSettings.tsx"
@@ -14816,6 +14944,9 @@
   ],
   "Your key is saved; type to replace it": [
     "web/src/app/assistant/AssistantSettings.tsx"
+  ],
+  "Your key is stored only in this browser. Like any page that calls a provider itself, this app’s page can read it.": [
+    "web/src/app/assistant/AssistantDevice.tsx"
   ],
   "Your loops are closed. Work from Next, and catch things as they come.": [
     "web/src/app/method/LoopHome.tsx"
@@ -15387,9 +15518,11 @@
     "web/src/lib/shortcuts.ts"
   ],
   "for example gemini-2.5-flash": [
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "for example gpt-4.1-mini": [
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
   ],
   "for {email}": [
@@ -16073,7 +16206,11 @@
     "web/src/lib/activity.ts"
   ],
   "the model name your server serves": [
+    "web/src/app/assistant/AssistantDevice.tsx",
     "web/src/app/assistant/AssistantSettings.tsx"
+  ],
+  "the model server at {origin}": [
+    "web/src/app/assistant/useDeviceAssistant.ts"
   ],
   "the name": [
     "web/src/lib/activity.ts"

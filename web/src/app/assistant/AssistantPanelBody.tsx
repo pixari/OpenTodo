@@ -12,6 +12,8 @@ import { navigate } from '../router'
 import { requestSettingsFocus } from '../settingsIndex'
 import { AssistantConsent } from './AssistantConsent'
 import { ChangeSetReview, type ReviewResult } from './ChangeSetReview'
+import { DeviceLocked, DeviceSetupForm } from './AssistantDevice'
+import type { DeviceMode } from './useDeviceAssistant'
 
 export const ENCRYPTED_MESSAGE = msg('The assistant can’t read end-to-end encrypted tasks. Your tasks never leave your devices unencrypted.')
 
@@ -58,6 +60,8 @@ export interface PanelViewProps {
   /** The page's empty state holds the composer; the sheet keeps it at its foot. */
   composer?: ReactNode
   layout?: 'page' | 'sheet'
+  /** The on-device assistant of an encrypted account (assistant-on-device). */
+  device?: DeviceMode
 }
 
 /** The panel's content without state (rendered to markup in tests). */
@@ -76,6 +80,12 @@ export function AssistantPanelBody(p: PanelViewProps) {
   }
   if (s.reason === 'demo') return <p className="text-body">{t('The assistant is not available on the demo instance.')}</p>
   if (!s.enabled) return <p className="text-body">{t('The server owner has not turned the assistant on.')}</p>
+  const dev = s.mode === 'device' ? p.device : undefined
+  if (dev && s.device) {
+    if (dev.locked) return <DeviceLocked />
+    if (!dev.loaded) return <Skeleton shape="line" count={3} label={t('Loading the assistant')} />
+    if (!dev.setup || dev.editing) return <DeviceSetupForm allowance={s.device} setup={dev.setup} onSave={dev.save} onCancel={dev.setup ? () => dev.edit(false) : undefined} />
+  }
   return (
     <div className="space-y-4">
       {p.threads && (
@@ -96,7 +106,8 @@ export function AssistantPanelBody(p: PanelViewProps) {
         </nav>
       )}
       {!s.consented ? (
-        <AssistantConsent status={s} connected={p.connected} busy={p.consentBusy} error={p.consentError} onAccept={p.onAccept} />
+        <AssistantConsent status={s} connected={p.connected} busy={p.consentBusy} error={p.consentError} onAccept={p.onAccept}
+          device={dev?.setup ? { setup: dev.setup, onChange: () => dev.edit(true) } : undefined} />
       ) : (
         <>
           {p.messages.length === 0 && !p.streaming && !p.threads ? (

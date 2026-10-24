@@ -16,8 +16,10 @@ const NO_CONTEXT = () => ({})
 const noop = () => {}
 
 export default function AssistantPage({ name }: { name: string }) {
-  const connected = useOnline()
-  const c = useAssistantConversation({ context: NO_CONTEXT, onApplied: noop })
+  const online = useOnline()
+  const c = useAssistantConversation({ context: NO_CONTEXT, onApplied: noop, userName: name })
+  // A device turn needs no connection to this server (assistant-on-device).
+  const connected = online || c.status?.mode === 'device'
   const ready = useConversationReady(c, connected, 'data-assistant-page')
   const { status, composer, review: rv, streaming } = c
   const usable = !!status?.enabled && status.reason !== 'encryption_enabled'
@@ -46,12 +48,12 @@ export default function AssistantPage({ name }: { name: string }) {
           </>
         ) : undefined} />
       <div className="mx-auto w-full max-w-[46rem] flex-1 py-4">
-        <AssistantPanelBody status={status} connected={connected} messages={c.thread?.messages ?? []} streaming={streaming} announce={c.live.announce}
+        <AssistantPanelBody status={status} connected={online} messages={c.thread?.messages ?? []} streaming={streaming} announce={c.live.announce}
           statusAnnounce={c.statusAnnounce} review={rv.review} result={rv.result} reviewBusy={rv.reviewBusy} error={c.error} draft={composer.draft}
           consentBusy={c.consent.consentBusy} consentError={c.consent.consentError} threads={c.threads} reviewRef={rv.reviewRef}
           onToggle={rv.toggle} onApply={() => void rv.apply()} onDiscard={() => void rv.discard()} onUndo={() => void rv.undo()} onDraft={composer.setDraft} onSend={() => void c.send()}
           onStop={c.stop} onAccept={(k) => void c.consent.accept(k)} onPickThread={c.pickThread}
-          name={name} skills={composer.skills} onStarter={(s) => { composer.chooseSkill(s); focusComposer() }} composer={composerFor(true)} layout="page" />
+          name={name} skills={composer.skills} onStarter={(s) => { composer.chooseSkill(s); focusComposer() }} composer={composerFor(true)} layout="page" device={c.device} />
       </div>
       {usable && !empty && (
         <div className="sticky bottom-0 mx-auto w-full max-w-[46rem] space-y-1 bg-surface pb-4 pt-2" data-assistant-foot>

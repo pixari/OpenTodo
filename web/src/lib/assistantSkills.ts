@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { api } from './api'
 import { DEFAULT_GRID_PREFS, GRID_PREFS_META_KEY, normalizeGridPrefs, type GridPrefs } from './calendar'
 import { getMeta } from './db'
+import { assistantStatus } from './assistantStatus'
 
 export interface AssistantSkill {
   id: string
@@ -25,6 +26,15 @@ export async function loadSkills(): Promise<AssistantSkill[]> {
     cache = (await api.assistantSkills()).skills
   } catch {
     cache ??= []
+  }
+  // An encrypted account in device mode runs the skills of the generated manifest (assistant-on-device D11).
+  if (!cache.length && assistantStatus()?.mode === 'device') {
+    try {
+      const { manifest } = await import('./assistantDevice/manifest')
+      cache = manifest.skills.map(({ id, name, description, example, result, subject }) => ({ id, name, description, example, result, ...(subject ? { subject } : {}) }))
+    } catch {
+      // The chunk could not load (offline after an update): no starters.
+    }
   }
   listeners.forEach((fn) => fn(cache!))
   return cache

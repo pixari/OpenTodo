@@ -235,7 +235,7 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 			h.Set("Strict-Transport-Security", "max-age=31536000")
 		}
 		if !strings.HasPrefix(r.URL.Path, "/api/") {
-			h.Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+			h.Set("Content-Security-Policy", s.contentSecurityPolicy(r.Context()))
 		}
 		next.ServeHTTP(w, r)
 	})

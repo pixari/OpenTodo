@@ -112,7 +112,7 @@ In this order. Each starts as an OpenSpec change under `openspec/changes/`. The 
 | --- | --- | --- | --- |
 | 1 | **Shipped.** AI assistants can act through MCP: create, edit, complete, reschedule and move tasks, create projects and labels, comment | `mcp-write-tools` | Needs an `agent` token plus owner and user switches (both off by default). Every write goes through the op log, is attributed in history, audited, rate limited and reversible. No permanent deletion |
 | 2 | **Shipped.** `ot` as a dependable tool for agent harnesses | `agent-ready-cli` | Versioned `--json` schemas, `ot schema`, `--dry-run`, idempotency keys, `--yes` required without a terminal, read-only mode, a shipped agent skill file. The CLI stays in this repository; no Homebrew or Scoop repositories for now |
-| 3 | **Shipped.** Conversational assistant in the app, with your own model key | `in-app-assistant` | Anthropic, OpenAI, Gemini or any OpenAI-compatible endpoint (including local models). Off by default, per-user consent, every change reviewed before it applies and undoable in one step. Not available for end-to-end encrypted accounts in the first version. Its own page, the composer tray and the change-set card: `assistant-surface` |
+| 3 | **Shipped.** Conversational assistant in the app, with your own model key | `in-app-assistant` | Anthropic, OpenAI, Gemini or any OpenAI-compatible endpoint (including local models). Off by default, per-user consent, every change reviewed before it applies and undoable in one step. End-to-end encrypted accounts run it on their own device with their own key when the owner allows it (`assistant-on-device`). Its own page, the composer tray and the change-set card: `assistant-surface` |
 | 4 | **In progress.** A Claude Code plugin with an MCP agent skill | `claude-plugin` | Built in `deploy/claude-plugin/`, published to `pixari/opentodo-claude` after each release. Asks for the server address and an agent token; checks keep the skills in step with the MCP tools |
 
 ## Next: Design refresh
@@ -189,7 +189,6 @@ Not commitments, just honest next steps. Each would start as an OpenSpec change.
 - **Rich text for comments.** Comments are Markdown today; reuse the notes editor where it helps without losing the plain-text API.
 - **Built-in SMTP receiver** for email to task, for operators who own an MX record (`email-smtp-receiver`).
 - **Published browser extension** in the Chromium and Firefox stores. (File and image sharing through the share target is part of `attachments` above.)
-- **In-app assistant for end-to-end encrypted accounts.** The first in-app assistant runs its loop on the server, which cannot read encrypted content. A direct-from-device mode (the browser holds the key and calls the model provider itself) could serve encrypted accounts, at the cost of exposing the model key to the browser and depending on provider CORS rules.
 
 ## Principles that do not change
 

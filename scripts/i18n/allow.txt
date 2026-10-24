@@ -20,3 +20,5 @@ web/src/ui/icons/Brand.tsx: OpenTodo
 
 # The product name as the placeholder of the instance name field (instance-branding)
 web/src/app/BrandingPanel.tsx: OpenTodo
+# On-device assistant (assistant-on-device): a sample model server origin.
+web/src/app/assistant/AssistantDevice.tsx: http://localhost:11434
