@@ -4782,7 +4782,8 @@
     "web/src/app/ImportScreen.tsx"
   ],
   "Formatting": [
-    "web/src/app/EditorChrome.tsx"
+    "web/src/app/EditorChrome.tsx",
+    "web/src/app/task-detail/Composer.tsx"
   ],
   "Former member": [
     "web/src/app/AssigneePicker.tsx",
@@ -6645,6 +6646,9 @@
     "web/src/app/EditorChrome.tsx",
     "web/src/app/task-detail/Composer.tsx",
     "web/src/lib/richtextEditor.ts"
+  ],
+  "Mention someone": [
+    "web/src/app/task-detail/Composer.tsx"
   ],
   "Mentions": [
     "web/src/app/NotificationChannelEditor.tsx"

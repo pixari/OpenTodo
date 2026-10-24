@@ -5266,5 +5266,6 @@
   "Group: {name}": "Gruppo: {name}",
   "No workspace named \"{name}\"": "Nessuno spazio di lavoro chiamato «{name}»",
   "Workspace": "Spazio di lavoro",
-  "Workspace is {name}": "Spazio di lavoro è {name}"
+  "Workspace is {name}": "Spazio di lavoro è {name}",
+  "Mention someone": "Menziona qualcuno"
 }

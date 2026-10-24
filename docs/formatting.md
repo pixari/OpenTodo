@@ -21,7 +21,7 @@ Start a line with `- ` for a bullet list, `1. ` for a numbered list, `[ ] ` for 
 
 Type `/` at the start of a line or after a space to open a menu of everything the editor can insert: headings, lists, a table, a quote, a code block, a link, an image, today's date and a mention. Keep typing to filter it (`/tab` finds the table), move with <kbd>↑</kbd> and <kbd>↓</kbd>, press <kbd>Enter</kbd> to insert, or <kbd>Esc</kbd> to keep what you typed.
 
-On a phone, a row of buttons (bold, italic, link, lists and **More**) sits above the text while you write.
+On a phone, a row of buttons (bold, italic, link, lists and **More**) sits above the text while you write. In the comment box on a computer, the **Formatting** button shows the same row, and the **@** button starts a mention.
 
 ## Tables
 
