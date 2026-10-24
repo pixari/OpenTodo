@@ -1176,13 +1176,13 @@ button.ui-column-add { @apply flex-row items-start justify-start px-3 py-2.5 hov
 .display-columns { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
 /* Today on a landscape screen: the day's list on the left, the next days beside it. */
 .display-board { display: flex; flex-direction: column; gap: 1.5rem; }
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
   .display-columns { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11em), 1fr)); }
   /* Side by side, the day columns use a step smaller type than the day's own list. */
   .display-columns .display-task { font-size: calc(var(--text-body) * var(--display-scale) * 0.85); }
   .display-columns .display-heading { font-size: calc(var(--text-meta) * var(--display-scale) * 0.9); }
 }
-@media (min-width: 1024px) {
+@media (min-width: 64rem) {
   .display-board[data-split] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 2rem; align-items: start; }
 }
 }
@@ -1207,7 +1207,7 @@ button.ui-column-add { @apply flex-row items-start justify-start px-3 py-2.5 hov
 @keyframes panel-exit { from { transform: none; opacity: 1; } to { transform: translateX(1.5rem); opacity: 0; } }
 .dialog-sheet { animation: dialog-sheet-up var(--duration-emphasis) var(--ease-spring) backwards; }
 .dialog-sheet[data-closing] { animation: dialog-sheet-down calc(var(--duration-emphasis) * 0.75) var(--ease-calm) both; }
-@media (min-width: 640px) {
+@media (min-width: 40rem) {
   .dialog-card { animation: dialog-enter var(--duration-emphasis) var(--ease-spring) backwards; }
   .dialog-card[data-closing] { animation: dialog-exit calc(var(--duration-emphasis) * 0.75) var(--ease-calm) both; }
 }
@@ -1239,7 +1239,7 @@ html:root[data-contrast="high"] .quick-add-tint { background-color: transparent;
    read by both panels (`lg:w-(--panel-w)`). A `min-[1440px]` utility lost to `lg` in
    Tailwind's order (px and rem do not sort), so the panel stayed 26 rem. */
 :root { --panel-w: 26rem; }
-@media (min-width: 1440px) { :root { --panel-w: 30rem; } }
+@media (min-width: 90rem) { :root { --panel-w: 30rem; } }
 /* A split page (inbox-split D1): the detail takes about half of the content beside the
    sidebar, between 26 and 44 rem. */
 :root[data-task-split] { --panel-w: clamp(26rem, 42vw, 44rem); }

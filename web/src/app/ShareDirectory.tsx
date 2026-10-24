@@ -38,7 +38,7 @@ export function ShareDirectory({ projectId, workspace, membership, roles, busy, 
     <div className="mb-4 space-y-3" data-share-directory>
       {!online && <p role="status" className="text-meta text-muted" data-share-offline>{t('Sharing needs a connection. The people and groups below are from this device.')}</p>}
       <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (who) run(() => workspaceApi.addMemberById(projectId, who, role)); setWho('') }}>
-        <select className="ui-input min-w-0 flex-1" aria-label={t('Person')} value={who} disabled={disabled} onChange={(e) => setWho(e.target.value)} data-directory-picker>
+        <select className="ui-input min-w-0 flex-[1_1_14rem]" aria-label={t('Person')} value={who} disabled={disabled} onChange={(e) => setWho(e.target.value)} data-directory-picker>
           <option value="">{candidates.length ? t('Choose a person') : t('Everyone in {workspace} is on this project', { workspace: workspace.name })}</option>
           {candidates.map((p) => <option key={p.userId} value={p.userId}>{p.name || t('Unnamed')}</option>)}
         </select>

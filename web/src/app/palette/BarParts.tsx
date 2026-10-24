@@ -35,13 +35,14 @@ export function ModeSwitch({ modes, mode, onMode }: { modes: BarMode[]; mode: Ba
   }
   return (
     // On a desktop with a mouse the footer names the prefixes instead (palette-quick-add D6).
-    <div role="radiogroup" aria-label={t('Mode')} onKeyDown={move} className="mx-3 mt-2 flex gap-1 rounded-control bg-sunken p-0.5 sm:pointer-fine:hidden" data-bar-modes>
+    // With a large text size the modes wrap to a second line instead of overflowing (precision-polish-2).
+    <div role="radiogroup" aria-label={t('Mode')} onKeyDown={move} className="mx-3 mt-2 flex flex-wrap gap-1 rounded-control bg-sunken p-0.5 sm:pointer-fine:hidden" data-bar-modes>
       {modes.map((m) => {
         const checked = m === mode
         return (
           <button key={m} ref={(el) => { refs.current[m] = el }} type="button" role="radio" aria-checked={checked} tabIndex={checked ? 0 : -1}
             onClick={() => onMode(m)} data-bar-mode={m}
-            className={`min-h-8 flex-1 rounded-chip px-2 text-meta font-medium ${checked ? 'bg-surface text-strong shadow-1' : 'text-muted hover:text-default'}`}>
+            className={`min-h-8 flex-auto rounded-chip px-2 text-meta font-medium ${checked ? 'bg-surface text-strong shadow-1' : 'text-muted hover:text-default'}`}>
             {MODE_LABEL[m]}
           </button>
         )

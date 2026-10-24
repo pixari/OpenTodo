@@ -69,7 +69,9 @@ function linked(fact: BriefingFact, node: ReactNode): ReactNode {
         <PartLink href={routePath({ view: 'today' })} label={text && t('{text}, select them in Today', { text })} go={() => revealTasks(fact.ids)} part="late">{node}</PartLink>
       )
     case 'full':
-      return <PartLink href={routePath({ view: 'upcoming' })} label={text && t('{text}, open in Upcoming', { text })} go={() => openUpcomingDay(fact.dates[0])} part="full">{node}</PartLink>
+      // Several full days link one by one (fullDays); one day links its whole clause.
+      return fact.dates.length > 1 ? node
+        : <PartLink href={routePath({ view: 'upcoming' })} label={text && t('{text}, open in Upcoming', { text })} go={() => openUpcomingDay(fact.dates[0])} part="full">{node}</PartLink>
     case 'replies':
       return fact.count === 1 && fact.name && fact.task ? node
         : <PartLink label={text && t('{text}, open notifications', { text })} go={openNotifications} part="replies">{node}</PartLink>
@@ -78,8 +80,32 @@ function linked(fact: BriefingFact, node: ReactNode): ReactNode {
   }
 }
 
-/** One clause of what stands out, without its sentence start. */
-function clause(fact: BriefingFact): ReactNode {
+/**
+ * "Friday and Monday are already full" with each day its own link to that day in
+ * Upcoming (precision-polish-2): the language's list pattern and plural word the
+ * sentence around per-day marks, which are then replaced by the links.
+ */
+function fullDays(dates: readonly string[], start: boolean): ReactNode {
+  const marks = dates.map((_, i) => `\u0002${i}\u0002`)
+  const text = t('{n, plural, one {{days} is already full} other {{days} are already full}}', { n: dates.length, days: formatList(marks) })
+  const parts = text.split(/\u0002(\d+)\u0002/)
+  // The first visible part takes the capital when the clause starts the sentence.
+  const lead = parts.findIndex((p, j) => j % 2 === 1 || p !== '')
+  return parts.map((part, i) => {
+    const first = start && i === lead
+    if (i % 2 === 0) return part ? <Fragment key={i}>{first ? sentenceStart(part) : part}</Fragment> : null
+    const date = dates[Number(part)]
+    const day = weekday(date)
+    return (
+      <PartLink key={i} href={routePath({ view: 'upcoming' })} label={t('{text}, open in Upcoming', { text: day })} go={() => openUpcomingDay(date)} part="full-day">
+        {first ? sentenceStart(day) : day}
+      </PartLink>
+    )
+  })
+}
+
+/** One clause of what stands out; `start` when it begins the sentence. */
+function clause(fact: BriefingFact, start = false): ReactNode {
   switch (fact.kind) {
     case 'late':
       return fact.task
@@ -88,7 +114,8 @@ function clause(fact: BriefingFact): ReactNode {
     case 'overfull':
       return t('today holds {planned} of work, more than your {length} day', { planned: formatMinutes(fact.planned), length: formatMinutes(fact.dayLength) })
     case 'full':
-      return t('{n, plural, one {{days} is already full} other {{days} are already full}}', { n: fact.dates.length, days: formatList(fact.dates.map(weekday)) })
+      return fact.dates.length > 1 ? fullDays(fact.dates, start)
+        : t('{n, plural, one {{days} is already full} other {{days} are already full}}', { n: 1, days: weekday(fact.dates[0]) })
     case 'replies':
       if (fact.count > 1) return t('{n, plural, one {# reply is} other {# replies are}} waiting', { n: fact.count })
       if (fact.name && fact.task) return t.rich('{name} answered about <task>{title}</task>', { name: fact.name, ...taskValues(fact.task) })
@@ -113,7 +140,7 @@ function factsSentence(facts: readonly BriefingFact[]): ReactNode {
       {parts.map((part, i) => {
         if (i % 2 === 0) return part ? <Fragment key={i}>{part}</Fragment> : null
         const n = Number(part)
-        const node = clause(facts[n])
+        const node = clause(facts[n], n === 0)
         return <span key={i} className={`font-medium ${TONE[facts[n].kind]}`} data-briefing-fact={facts[n].kind}>{linked(facts[n], n === 0 ? sentenceStart(node) : node)}</span>
       })}
       .

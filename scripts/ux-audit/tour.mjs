@@ -11,7 +11,8 @@
 //   node scripts/ux-audit/tour.mjs         against an existing bin/opentodo
 //
 // Env: OUT_DIR (default ux-audit-report), ONLY (inventory ids), WIDTHS (360,768,1280),
-// THEMES (light,dark), LANGS (en,de), CONCURRENCY (2), CHROMIUM_PATH, OPENTODO_BIN
+// THEMES (light,dark), LANGS (en,de), CONCURRENCY (2), TEXT_SIZE (the browser's default font size in px,
+// as its text size setting sets it, e.g. 20 or 24; default 16), CHROMIUM_PATH, OPENTODO_BIN
 // (bin/opentodo), UX_AUDIT_STRICT=1 (exit 1 on budget, overflow, story-coverage and reduced-motion
 // violations; otherwise the tour only reports and exits 0).
 const pw = await import('playwright').catch(async () => {
@@ -43,6 +44,7 @@ const THEMES = (process.env.THEMES ?? 'light,dark').split(',')
 const LANGS = (process.env.LANGS ?? 'en,de').split(',')
 const CONCURRENCY = Number(process.env.CONCURRENCY ?? 2)
 const STRICT = process.env.UX_AUDIT_STRICT === '1'
+const TEXT_SIZE = Number(process.env.TEXT_SIZE ?? 16)
 const HEIGHTS = { 360: 740, 768: 1024, 1280: 900 }
 const log = (...a) => console.log(...a)
 mkdirSync(join(OUT, 'shots'), { recursive: true })
@@ -132,10 +134,18 @@ async function measure(p, e, combo, overlay) {
   return v
 }
 
+/** The browser's text size setting (precision-polish-2): Chromium's default font size, through DevTools. */
+async function sizeText(p) {
+  if (TEXT_SIZE === 16) return p
+  const cdp = await p.context().newCDPSession(p)
+  await cdp.send('Page.setFontSizes', { fontSizes: { standard: TEXT_SIZE } })
+  return p
+}
+
 async function capture(ctx, anonCtx, page, e, combo, ids) {
   const host = hostOf(e, ids)
-  const p = host.anon ? await anonCtx.newPage() : page
-  const shot = `shots/${e.id}-${combo.width}-${combo.theme}-${combo.lang}.jpg`
+  const p = host.anon ? await sizeText(await anonCtx.newPage()) : page
+  const shot = `shots/${e.id}-${combo.width}-${combo.theme}-${combo.lang}${TEXT_SIZE === 16 ? '' : `-t${TEXT_SIZE}`}.jpg`
   const out = { id: e.id, width: combo.width, theme: combo.theme, lang: combo.lang, shot, violations: [] }
   const load = async () => {
     await p.goto(base + host.path)
@@ -178,7 +188,7 @@ async function runCombo(combo, ids) {
       await c.addInitScript(LAYOUT_SHIFT_INIT)
       await c.addInitScript((code) => { try { localStorage.setItem('opentodo.lang', code) } catch { /* storage blocked */ } }, combo.lang)
     }
-    const page = await ctx.newPage()
+    const page = await sizeText(await ctx.newPage())
     page.on('dialog', (d) => d.dismiss())
     await page.goto(base + '/inbox')
     await page.locator('[data-task-id]').first().waitFor({ timeout: 30000 })

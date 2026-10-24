@@ -39,6 +39,8 @@ async function waitFor(ok: () => boolean, ms = 2000) {
   expect(ok()).toBe(true)
 }
 const tickedTitles = () => [...document.querySelectorAll('[data-ticked] [data-tick]')].map((e) => e.getAttribute('aria-label')!.replace('Select ', ''))
+const option = (name: string) => [...document.querySelectorAll('[data-picker-step] [role="option"]')].find((o) => o.textContent?.includes(name)) as HTMLElement | undefined
+const errandOption = () => option('errand')
 const bar = () => document.querySelector('[data-selection-bar] [role="status"]')?.textContent ?? null
 
 async function inbox(...titles: string[]) {
@@ -185,6 +187,28 @@ describe('actions (2.5, 3.3, 4.2)', () => {
     }
     expect(labels).toEqual(ids.map(() => [l]))
     expect(document.querySelector('[data-picker-step]')).not.toBeNull()
+    // The open picker follows the stored tasks: the label now on every task is marked.
+    await waitFor(() => errandOption()?.getAttribute('aria-selected') === 'true')
+  })
+
+  it('a picker opened before the read marks the common label once the read lands (precision-polish-2)', async () => {
+    const l = await createLabel({ name: 'errand' })
+    await createLabel({ name: 'home' })
+    const { ids } = await inbox('One', 'Two')
+    for (const id of ids) await updateTask(id, { labels: [l] })
+    await key(document.body, 'j'); await key(document.body, 'x')
+    await key(document.body, 'ArrowDown', { shiftKey: true })
+    await waitFor(() => bar() === '2 selected')
+    await key(document.body, 'L', { shiftKey: true })
+    await waitFor(() => !!document.querySelector('[data-picker-step]'))
+    await waitFor(() => errandOption()?.getAttribute('aria-selected') === 'true')
+    expect(option('home')?.getAttribute('aria-selected')).toBe('false')
+    // Picking it removes it from both, and the mark goes away in the same open picker.
+    await act(async () => { errandOption()!.click() })
+    await waitFor(() => errandOption()?.getAttribute('aria-selected') === 'false')
+    for (const id of ids) expect((await db.tasks.get(id))!.labels).toEqual([])
+    // Let the pick's toast land here, not in the next case.
+    await waitFor(() => !!document.querySelector('[data-bulk-toast]'))
   })
 
   it('L then a label every ticked task has removes it, even when picked at once', async () => {

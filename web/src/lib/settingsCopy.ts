@@ -197,6 +197,14 @@ export const SETTINGS_COPY = {
     learnMore: 'settings/start-view',
     rows: { open: { label: msg('Open on launch') } },
   },
+  // The day pages' briefing (precision-polish-2): the same synced choice as Hide briefing in their menu.
+  briefing: {
+    title: msg('Briefing'),
+    icon: 'text-quote',
+    description: msg('The sentence under the title of Today and Upcoming. On all your devices.'),
+    learnMore: 'settings/briefing',
+    rows: { show: { label: msg('Show the briefing') } },
+  },
   'date-time': {
     title: msg('Date and time'),
     icon: 'calendar-clock',

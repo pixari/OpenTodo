@@ -4,7 +4,7 @@ summary: The sentence under the title of Today and Upcoming - what is late, a fu
 audience: user
 section: Guides
 specs: [web-app, localization, weekly-review]
-screens: []
+screens: [settings/briefing#hide-it]
 order: 22
 ---
 # The briefing
@@ -24,15 +24,15 @@ When nothing stands out it says so, with how many tasks are planned and the time
 Each part of the sentence leads to what it talks about. Click or tap it, or reach it with <kbd>Tab</kbd>; a part is underlined when you point at it.
 
 - **A task's name** ("Renew the passport", the task a reply is about, tomorrow's first task) opens the task. <kbd>Esc</kbd> brings you back.
-- **A count of late tasks** ("2 tasks are late") selects exactly those tasks in Today's list and scrolls to them, so the selection bar can reschedule them in one go. From the Daily check it opens Today first.
-- **A full day** ("Monday is already full") opens Upcoming at that day.
+- **A count of late tasks** ("2 tasks are late") selects exactly those tasks in Today's list and scrolls to them, so the selection bar can reschedule them in one go; <kbd>Esc</kbd> clears the selection. From the Daily check it opens Today first.
+- **A full day** ("Monday is already full") opens Upcoming at that day. When several days are full ("Friday and Monday are already full"), each day's name is its own link.
 - **Replies** ("3 replies are waiting") open your notifications.
 
 Following a part changes nothing.
 
 ## Hide it
 
-Choose **Hide briefing** in the menu (<kbd>…</kbd>) of Today or Upcoming. The title and the date stay. The choice belongs to your account, so your other devices hide it too once they sync; **Show briefing** in the same menu brings it back. The Daily check always opens with the sentence.
+Choose **Hide briefing** in the menu (<kbd>…</kbd>) of Today or Upcoming, or turn off **Show the briefing** in **Settings → General → Briefing**. The title and the date stay. The choice belongs to your account, so your other devices hide it too once they sync; **Show briefing** in the same menu, or the switch, brings it back. The Daily check always opens with the sentence.
 
 ## When Today is empty
 

@@ -111,7 +111,7 @@ describe('opening the panel moves nothing (list-stays-still D1)', () => {
   it('gives the docked panel one width, 26 rem and 30 rem from 1440 px', async () => {
     const css = (await import('../../index.css?raw')).default
     expect(css).toMatch(/:root\s*\{\s*--panel-w:\s*26rem;\s*\}/)
-    expect(css).toMatch(/@media \(min-width: 1440px\)\s*\{\s*:root\s*\{\s*--panel-w:\s*30rem;\s*\}\s*\}/)
+    expect(css).toMatch(/@media \(min-width: 90rem\)\s*\{\s*:root\s*\{\s*--panel-w:\s*30rem;\s*\}\s*\}/)
     const sources = import.meta.glob(['../../app/PanelFrame.tsx', '../../app/task-detail/TaskDetail.tsx'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>
     for (const [path, src] of Object.entries(sources)) {
       expect(src, path).toContain('lg:w-(--panel-w)')

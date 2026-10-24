@@ -1784,6 +1784,9 @@
   "Break this down": [
     "web/src/app/task-detail/TaskActionsMenu.tsx"
   ],
+  "Briefing": [
+    "web/src/lib/settingsCopy.ts"
+  ],
   "Bring back {title} from Someday": [
     "web/src/app/palette/registry.ts"
   ],
@@ -10960,6 +10963,11 @@
   "Show text": [
     "web/src/app/task-detail/HistoryTab.tsx"
   ],
+  "Show the briefing": [
+    "web/src/app/PreferencesPanels.tsx",
+    "web/src/app/settingsIndex.ts",
+    "web/src/lib/settingsCopy.ts"
+  ],
   "Show the filter": [
     "web/src/app/views/ViewToolbar.tsx"
   ],
@@ -12318,6 +12326,10 @@
   ],
   "The secure connection failed": [
     "web/src/app/OutgoingEmailPanel.tsx"
+  ],
+  "The sentence under the title of Today and Upcoming. On all your devices.": [
+    "web/src/app/settingsIndex.ts",
+    "web/src/lib/settingsCopy.ts"
   ],
   "The server answered {status}.": [
     "web/src/lib/attachments.ts"

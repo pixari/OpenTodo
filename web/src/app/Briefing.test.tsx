@@ -70,6 +70,32 @@ describe('briefing wording', () => {
     expect(tomorrow.querySelector('[data-briefing-link="task"]')!.getAttribute('href')).toBe('/task/s')
   })
 
+  it('several full days are one link each, opening that day in Upcoming (precision-polish-2)', () => {
+    const el = text({ mode: 'upcoming', count: 6, facts: [{ kind: 'full', dates: ['2026-10-23', '2026-10-26'] }], tomorrow: { count: 0, first: null } })
+    const days = [...el.querySelectorAll<HTMLAnchorElement>('[data-briefing-link="full-day"]')]
+    expect(days.map((d) => d.textContent)).toEqual(['Friday', 'Monday'])
+    expect(days.map((d) => d.getAttribute('aria-label'))).toEqual(['Friday, open in Upcoming', 'Monday, open in Upcoming'])
+    expect(days.every((d) => d.getAttribute('href') === '/upcoming')).toBe(true)
+    expect(el.querySelector('[data-briefing-link="full"]')).toBeNull()
+    expect(el.querySelector('[data-briefing-fact="full"]')!.textContent).toBe('Friday and Monday are already full')
+    const three = text({ mode: 'upcoming', count: 9, facts: [{ kind: 'full', dates: ['2026-10-23', '2026-10-24', '2026-10-26'] }], tomorrow: { count: 0, first: null } })
+    expect(three.querySelector('[data-briefing-fact="full"]')!.textContent).toBe('Friday, Saturday and Monday are already full')
+    expect(three.querySelectorAll('[data-briefing-link="full-day"]').length).toBe(3)
+  })
+
+  it.each([
+    ['de', 'Freitag und Montag sind schon voll'],
+    ['es', 'Viernes y lunes ya están completos'],
+    ['fr', 'Vendredi et lundi sont déjà complets'],
+    ['it', 'Venerdì e lunedì sono già al completo'],
+    ['pt', 'Sexta-feira e segunda-feira já não têm espaço'],
+  ] as const)('in %s the days are linked one by one inside the language\'s own list and plural', async (lang, sentence) => {
+    await applyLanguagePreference(lang, ['en-US'])
+    const el = text({ mode: 'upcoming', count: 6, facts: [{ kind: 'full', dates: ['2026-10-23', '2026-10-26'] }], tomorrow: { count: 0, first: null } })
+    expect(el.querySelector('[data-briefing-fact="full"]')!.textContent).toBe(sentence)
+    expect(el.querySelectorAll('[data-briefing-link="full-day"]').length).toBe(2)
+  })
+
   it('in Italian the same facts read in Italian; the task titles stay as written', async () => {
     await applyLanguagePreference('it', ['en-US'])
     expect(text(THREE).textContent).toBe('Oggi contano tre cose. Renew the passport è in ritardo di 2 giorni, venerdì è già al completo e Mia ha risposto su Boiler.')

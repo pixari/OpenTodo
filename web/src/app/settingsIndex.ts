@@ -45,6 +45,7 @@ export const SETTINGS_INDEX: readonly SettingsEntry[] = translatedList<SettingsE
   // General
   { section: 'general', label: msg('Language'), description: msg('The language of the app on all your devices'), anchor: 'language-heading', keywords: 'language locale translation sprache langue idioma lingua idioma' },
   { section: 'general', label: msg('Start view'), description: msg('The view this device opens on'), anchor: 'start-view-heading', keywords: 'launch open on' },
+  { section: 'general', label: msg('Show the briefing'), description: msg('The sentence under the title of Today and Upcoming. On all your devices.'), anchor: 'briefing-heading', keywords: 'briefing summary sentence today upcoming hide' },
   { section: 'general', label: msg('Date format'), description: msg('Day-month, month-day or ISO'), anchor: 'date-time-heading' },
   { section: 'general', label: msg('Time format'), description: msg('12-hour or 24-hour'), anchor: 'date-time-heading', keywords: 'clock' },
   { section: 'general', label: msg('First day of the week'), description: msg('Where the Week view and calendars start'), anchor: 'date-time-heading', keywords: 'week start monday sunday' },

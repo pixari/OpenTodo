@@ -1,6 +1,6 @@
 // Settings → General panels (OpenSpec settings-navigation, settings-redesign D3).
 import { useUserPrefsRow } from '../lib/localData'
-import { readLanguage, setUserPref } from '../lib/userPrefs'
+import { briefingHidden, readLanguage, setBriefingShown, setUserPref } from '../lib/userPrefs'
 import type { LanguagePref } from '../lib/types'
 import { SHIPPED, nativeName } from '../locales'
 import { Notice } from '../ui'
@@ -94,6 +94,21 @@ export function StartViewView({ views, startView, onChange }: { views: View[]; s
           </optgroup>
         </Select>
       } />
+    </SettingsSection>
+  )
+}
+
+/** Settings → General → Briefing (precision-polish-2): the synced user_prefs.briefing, as in the day pages' menu. */
+export function BriefingSection() {
+  const row = useUserPrefsRow()
+  return <BriefingView shown={!briefingHidden(row)} onChange={(on) => act(setBriefingShown(on))} />
+}
+
+export function BriefingView({ shown, onChange }: { shown: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <SettingsSection {...cardCopy('briefing')}>
+      <SettingRow {...rowCopy('briefing', 'show')} id="briefing-show" htmlFor="briefing-show-switch"
+        control={<span data-briefing-switch><Switch id="briefing-show-switch" checked={shown} onChange={onChange} label={t('Show the briefing')} hideLabel /></span>} />
     </SettingsSection>
   )
 }
