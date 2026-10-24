@@ -19,12 +19,14 @@ The add-or-remove decision stays at the pick, from the stored tasks (`precision-
 The tour (`scripts/ux-audit/tour.mjs`, new `TEXT_SIZE`) sets Chromium's default font size through the DevTools protocol (`Page.setFontSizes`), the same effect as the browser's text size setting, and was run at 16, 20 and 24 px on Settings (all eleven sections and Workspaces), Statistics, Focus, the Loop home, the task page and the public task page, the command palette, quick add, the add menu, the bulk, project, section, label and view menus, the share, template, fields and duplicate dialogs, the label picker and When popover, sign-in and forgot-password, and display mode (Today, Upcoming, a project), at 360 and 1280 px in light. Findings that also appear at 16 px (a 5 px overlap of the sidebar's fold chevron and project row, the scrolled-under floating add button) are not text-size faults and are left.
 
 Fixes, each keeping the default text size unchanged:
-- Flex items that must keep a readable width get a rem flex basis (`flex-[1_1_14rem]`, `flex-[1_1_8rem]`) inside a wrapping row, so the row wraps instead of squeezing them: the Share dialog's email field and the workspace directory's person picker, the profile card's name (the role wraps under it).
+- Flex items that must keep a readable width get a rem flex basis (`flex-[1_1_14rem]`, `flex-[1_1_8rem]`) inside a wrapping row, so the row wraps instead of squeezing them: the Share dialog's email field, the profile card's name (the role badge wraps to a line of its own when the name would get less than 8 rem).
 - Fixed widths get `max-w-full` (branding name, rule trigger), rows that hold a label and a control wrap (rule fields).
-- The palette's mode switch wraps (`flex-wrap`, `flex-auto`) instead of overlapping.
-- The date picker's month grid is `table-fixed`, and on touch its day cells lose their padding: seven 44 px targets fit 324 px, the room a phone at 24 px leaves.
+- The palette's mode switch wraps (`flex-wrap`, buttons `flex-1` with `min-w-fit`) instead of overlapping; at the default size the four modes keep equal widths.
+- On touch the date picker's day cells lose their padding: seven 44 px targets fit 324 px, the room a phone at 24 px leaves.
 - Pixel breakpoints become rem: the stylesheet's display-mode columns (48 rem), board split (64 rem), the dialog card animation (40 rem, matching the script's sheet placement), the panel width (90 rem); the class breakpoints of the Statistics tiles (`min-[21.25rem]`) and the shortcut spotlight (`min-[25rem]`).
 - The phone header's **Process {count}** keeps only its icon below 21 rem of viewport, like the desktop header's Process since 0.11 (`design-system` "Breakpoints follow the text size" already allows it).
+
+Every fix keeps the default-size rendering, so the Storybook baselines move only for the new Briefing card on the General page.
 
 Visual tests: the repository's visual regression runs on Storybook stories at the default text size (`make ui-check`); there is no pattern for a larger text size there, and adding one would double every baseline. The interaction tests cover the briefing and bulk changes; the larger-text check is the tour, now repeatable with `TEXT_SIZE`.
 

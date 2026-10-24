@@ -6,7 +6,7 @@
 ## 2. Larger text sizes
 
 - [x] 2.1 `scripts/ux-audit/tour.mjs` takes `TEXT_SIZE` (Chromium's default font size through DevTools); verified by running the tour at 16, 20 and 24 px on the screens of the proposal at 360 and 1280 px.
-- [x] 2.2 Fix the faults (D2): date picker grid, Share dialog and workspace directory fields, profile card, palette modes, Statistics tiles, spotlight columns, stylesheet media queries, branding and rule fields, the phone header's Process; verified by re-running the tour at 24 px (the When popover, Share, Settings, the palette, the Inbox and Statistics) and `npm test`, `npm run build`.
+- [x] 2.2 Fix the faults (D2): date picker grid, Share dialog field, profile card, palette modes, Statistics tiles, spotlight columns, stylesheet media queries, branding and rule fields, the phone header's Process; verified by re-running the tour at 24 px (the When popover, Share, Settings, the palette, the Inbox and Statistics) and `npm test`, `npm run build`.
 
 ## 3. Briefing
 

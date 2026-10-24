@@ -285,17 +285,15 @@ function ResultLink({ section, onOpen }: { section: SettingsSection; onOpen: () 
 /** Who is signed in: avatar initials, name, email and role (the list and Account). */
 export function ProfileCard({ user, compact = false }: { user: User; compact?: boolean }) {
   return (
-    <div id="profile" className={`flex items-center gap-3 rounded-card border border-default bg-surface ${compact ? 'p-3' : 'gap-4 p-4'} shadow-1`} data-profile-card>{/* surface-lint-allow: the profile card above the list */}
+    <div id="profile" className={`flex flex-wrap items-center gap-3 rounded-card border border-default bg-surface ${compact ? 'p-3' : 'gap-4 p-4'} shadow-1`} data-profile-card>{/* surface-lint-allow: the profile card above the list */}
       <PersonAvatar id={user.id} name={user.name || user.email} size={compact ? 'md' : 'lg'} />
-      {/* The role sits after the name and wraps under it when the name needs the width
-          (a phone with a large text size, precision-polish-2), so the name is not cut to a letter. */}
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <p className="user-text min-w-0 max-w-full flex-[1_1_8rem] truncate text-body font-semibold text-default">{user.name || user.email}</p>
-          <Badge hue={user.role === 'owner' ? 'green' : user.role === 'admin' ? 'indigo' : 'slate'}>{ACCOUNT_ROLE_LABEL[user.role]}</Badge>
-        </div>
+      {/* The role wraps under the card when the name needs the width (a phone with a large
+          text size, precision-polish-2), so the name is not cut to a letter. */}
+      <div className="min-w-0 flex-[1_1_8rem]">
+        <p className="user-text truncate text-body font-semibold text-default">{user.name || user.email}</p>
         <TruncatedText as="p" className="user-text text-meta text-muted" text={user.email} />
       </div>
+      <Badge hue={user.role === 'owner' ? 'green' : user.role === 'admin' ? 'indigo' : 'slate'}>{ACCOUNT_ROLE_LABEL[user.role]}</Badge>
     </div>
   )
 }

@@ -42,6 +42,6 @@ None.
 
 ## Impact
 
-- Web only: `web/src/app` (bulk/BulkActions, menus/ActionMenu, Briefing, PreferencesPanels, SettingsView, settingsIndex, palette/BarParts, review/StatsView, shortcuts/Spotlight, task-list/ListChrome, ShareDialog, ShareDirectory, BrandingPanel, rules/RuleFields, datetime/DateField), `web/src/lib/settingsCopy.ts`, `web/src/index.css`; `scripts/ux-audit/tour.mjs` (`TEXT_SIZE`).
+- Web only: `web/src/app` (bulk/BulkActions, menus/ActionMenu, Briefing, PreferencesPanels, SettingsView, settingsIndex, palette/BarParts, review/StatsView, shortcuts/Spotlight, task-list/ListChrome, ShareDialog, BrandingPanel, rules/RuleFields, datetime/DateField), `web/src/lib/settingsCopy.ts`, `web/src/index.css`; `scripts/ux-audit/tour.mjs` (`TEXT_SIZE`).
 - Docs: `docs/briefing.md`, `ROADMAP.md`, CHANGELOG.
 - Bundle size: no dependency; a few hundred bytes.

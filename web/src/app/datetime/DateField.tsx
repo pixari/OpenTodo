@@ -165,9 +165,8 @@ export function CalendarGrid({ value, prefs, onPick, today = logicalToday(), com
         <h3 id={headingId} className="flex-1 text-center text-body font-semibold text-default" aria-live="polite">{monthName().format(dateOf(month))}</h3>
         <IconButton icon="chevron-right" label={t('Next month')} size="sm" onClick={() => shiftMonth(1)} />
       </div>
-      {/* Equal columns, and on touch no gap around the 44 px days, so seven fit a phone with a
-          large text size (precision-polish-2). */}
-      <table ref={grid} role="grid" aria-labelledby={headingId} className="w-full table-fixed border-collapse text-center text-body" onKeyDown={onKey}>
+      {/* On touch no gap around the 44 px days, so seven fit a phone with a large text size (precision-polish-2). */}
+      <table ref={grid} role="grid" aria-labelledby={headingId} className="w-full border-collapse text-center text-body" onKeyDown={onKey}>
         <thead>
           <tr>
             {days.slice(0, 7).map((d) => (
