@@ -126,6 +126,48 @@ func TestViewsCrud(t *testing.T) {
 	}
 }
 
+func TestViewsStoreCustomFieldSortIDWithoutName(t *testing.T) {
+	e := registeredEnv(t)
+	const fieldID = "0a4f7d89-6c12-4b63-8a91-2e35c47d8091"
+	const sortBy = "field:" + fieldID
+	resp, out := e.do("POST", "/api/v1/views", map[string]any{
+		"name": "Highest score", "query": "p1", "sort_by": sortBy,
+	})
+	e.mustStatus(resp, 201, out)
+	id := out["id"].(string)
+	if out["sort_by"] != sortBy {
+		t.Fatalf("created view sort_by = %v, want %s", out["sort_by"], sortBy)
+	}
+
+	resp, out = e.do("PATCH", "/api/v1/views/"+id, map[string]any{"sort_by": sortBy})
+	e.mustStatus(resp, 200, out)
+	if out["sort_by"] != sortBy {
+		t.Fatalf("patched view sort_by = %v, want %s", out["sort_by"], sortBy)
+	}
+
+	resp, out = e.do("GET", "/api/v1/views/"+id, nil)
+	e.mustStatus(resp, 200, out)
+	if out["sort_by"] != sortBy {
+		t.Fatalf("stored view sort_by = %v, want %s", out["sort_by"], sortBy)
+	}
+
+	// The operation log persists only the definition id, never its decrypted field name.
+	resp, out = e.do("POST", "/api/v1/sync", map[string]any{"device": "phone", "cursor": 0})
+	e.mustStatus(resp, 200, out)
+	found := false
+	for _, raw := range out["ops"].([]any) {
+		op := raw.(map[string]any)
+		if op["entity"] == "view" && op["field"] == "sort_by" {
+			found = true
+			if op["value"] != sortBy {
+				t.Fatalf("sort operation = %v, want %s", op["value"], sortBy)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("sync did not return the field-id sort operation: %v", out["ops"])
+	}
+}
 func TestViewsRejectInvalidOption(t *testing.T) {
 	e := registeredEnv(t)
 	resp, out := e.do("POST", "/api/v1/views", map[string]any{"name": "List", "query": "p1"})
@@ -194,6 +236,34 @@ func TestViewsRejectInvalidOption(t *testing.T) {
 		e.mustStatus(resp, 400, out)
 		if errCode(out) != "invalid_input" || !strings.Contains(errMessage(out), c.msg) {
 			t.Errorf("PATCH %v: error = %v, want message containing %q", c.body, out, c.msg)
+		}
+	}
+
+	for _, invalidSort := range []any{
+		"mood",
+		"field:",
+		"field:   ",
+		"field: padded",
+		"field:padded ",
+		"field:" + strings.Repeat("x", maxFieldName+1),
+		"field:11111111-1111-0111-8111-111111111111",
+		"field:11111111-1111-4111-7111-111111111111",
+		nil,
+		42,
+		[]string{"field:WSJF"},
+	} {
+		for _, target := range []struct {
+			method, path string
+			body         map[string]any
+		}{
+			{"POST", "/api/v1/views", map[string]any{"name": "bad sort", "query": "p1", "sort_by": invalidSort}},
+			{"PATCH", "/api/v1/views/" + list, map[string]any{"sort_by": invalidSort}},
+		} {
+			resp, out = e.do(target.method, target.path, target.body)
+			e.mustStatus(resp, 400, out)
+			if errCode(out) != "invalid_input" {
+				t.Errorf("%s sort_by %v: error = %v, want invalid_input", target.method, invalidSort, out)
+			}
 		}
 	}
 	resp, out = e.do("GET", "/api/v1/views/"+list, nil)

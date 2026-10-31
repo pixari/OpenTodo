@@ -119,6 +119,8 @@ ot list --available                # what can be done now: not blocked, not wait
 
 Human output is a compact table: an id prefix, priority, due date and time (overdue dates are marked and shown in red on a terminal), project and title, plus an `ORIGIN` column (the issue id or the page's host) when a listed task has an [origin](capture.md#where-a-task-came-from) and a `BY` column with the deadline when one has a deadline (a passed deadline is marked overdue), and an `ENERGY` column when a listed task has an energy; `--json` always carries `energy` (null for none). The due cell adds `(someday)`, `starts <date>` (for a multi-day task its days instead: `3–5 Nov`, `30 Oct – 2 Nov`, or with the years when they differ), `evening` (or `morning`, `afternoon`) and `waiting` when they apply. Dates are evaluated in your local time zone. A task fixed to a time zone (see [sync.md](sync.md#zoned-due-values)) is shown converted to your zone with the original as a hint, e.g. `2026-10-11 00:00 (09:00 Berlin)`; `ot edit --due/--time` on it takes the date and time as shown and keeps the zone, and `--time ""` releases it to a floating date. Tasks of archived projects stay out of the cross-project views, as in the web app.
 
+Custom-field sorting is available in the web app and saved views; `ot list` has no sort flag for it (see [Group and order](group-and-order.md)).
+
 ```
 ID        P   DUE                 PROJECT  TITLE
 8c2a91f0  P2  2026-10-08 overdue  Home     Pay rent

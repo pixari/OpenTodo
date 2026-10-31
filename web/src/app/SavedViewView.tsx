@@ -196,7 +196,7 @@ export function SavedViewView({ view, data }: { view: View; data: ViewData }) {
             actions={<IconButton icon={view.pinned ? 'pin-off' : 'pin'} size="sm" label={view.pinned ? t('Unpin') : t('Pin')} onClick={() => act(setFavourite('view', view.id, !view.pinned))} />}
             menu={<ViewMenu view={view} />} />
 
-          <ViewToolbar query={view.query} filterOpen={filterOpen} setFilterOpen={setFilterOpen} display={display}
+          <ViewToolbar sortFields={ctx.fields} query={view.query} filterOpen={filterOpen} setFilterOpen={setFilterOpen} display={display}
             onDisplay={(patch) => act(updateView(view.id, displayPatch(patch)))}
             colorBy={display.layout === 'board' ? { mode: boardColor.mode, onChange: boardColor.setMode } : undefined}
             onAdd={() => document.querySelector<HTMLButtonElement>('[data-filter-panel] [data-add-condition]')?.click()} />

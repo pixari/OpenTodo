@@ -30,7 +30,7 @@ var (
 	viewLayouts = []string{"list", "board"}
 	// viewRowLayouts: one line or detailed rows; "" follows the account's choice (row-layouts D1).
 	viewRowLayouts = []string{"", "line", "detailed"}
-	viewEnumSets   = map[string][]string{"kind": viewKinds, "group_by": viewGroupBy, "sort_by": viewSortBy, "sort_dir": viewSortDir, "layout": viewLayouts, "row_layout": viewRowLayouts}
+	viewEnumSets   = map[string][]string{"kind": viewKinds, "group_by": viewGroupBy, "sort_dir": viewSortDir, "layout": viewLayouts, "row_layout": viewRowLayouts}
 	// viewRowProps are the row properties a view can hide (views-and-display D3).
 	viewRowProps = []string{"date", "project", "labels", "estimate", "assignee", "deadline", "start", "origin", "energy"}
 	// viewDefaults are written on create for every field the caller leaves out.
@@ -104,6 +104,9 @@ func (s *Server) checkView(ctx context.Context, uid, id string, body map[string]
 	}
 	if name, ok := str("name"); ok && strings.TrimSpace(name) == "" {
 		return invalidView("view.name must not be empty")
+	}
+	if sortBy, ok := str("sort_by"); ok && !slices.Contains(viewSortBy, sortBy) && !validViewSortBy(sortBy) {
+		return invalidView("view.sort_by must be one of %s or field:<id>", strings.Join(viewSortBy, ", "))
 	}
 	for field, allowed := range viewEnumSets {
 		if v, ok := str(field); ok && !slices.Contains(allowed, v) {
@@ -180,6 +183,32 @@ func (s *Server) checkView(ctx context.Context, uid, id string, body map[string]
 		}
 	}
 	return nil
+}
+
+// validViewSortBy accepts a canonical UUID field definition id after the built-in sort options.
+func validViewSortBy(value string) bool {
+	id, ok := strings.CutPrefix(value, "field:")
+	if !ok || len(id) != 36 {
+		return false
+	}
+	for i, ch := range id {
+		if i == 14 && (ch < '1' || ch > '8') {
+			return false
+		}
+		if i == 19 && ch != '8' && ch != '9' && ch != 'a' && ch != 'b' {
+			return false
+		}
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if ch != '-' {
+				return false
+			}
+			continue
+		}
+		if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f')) {
+			return false
+		}
+	}
+	return true
 }
 
 // checkOnDrop validates a view's on-drop rule against current state (OpenSpec

@@ -24,3 +24,8 @@ export function fieldValueLabel(field: string): string | null {
   const id = field.slice(PREFIX.length)
   return knownNames.get(id) ?? id
 }
+
+/** Shared field-name matching for filters, sort values and display choices. */
+export function nameKey(name: string): string {
+  return name.trim().toLocaleLowerCase()
+}

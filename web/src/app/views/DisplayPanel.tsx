@@ -8,13 +8,14 @@ import { useRef, useState, type ReactNode } from 'react'
 import { Icon, IconButton, Popover, Switch, type IconName } from '../../ui'
 import {
   GROUP_BY_OPTIONS, ROW_PROPERTIES, SORT_BY_OPTIONS, VIEW_LAYOUTS,
-  type GroupBy, type RowProperty, type SortBy, type SortDir, type ViewLayout,
+  type FieldDef, type GroupBy, type RowProperty, type SortBy, type SortDir, type ViewLayout,
 } from '../../lib/types'
 import { msg, t, translatedMap } from '../../lib/i18n'
 import type { ListGroupBy } from '../../lib/listDisplay'
 import { ROW_LAYOUTS, type RowLayout } from '../../lib/rowLayout'
 import { COLOR_BY_MODES, type ColorByMode } from '../../lib/colorBy'
 import { COLOR_BY_LABEL } from '../calendar/colorByControls'
+import { fieldSortOptions } from '../../lib/fieldSortOptions'
 
 export interface ViewDisplay {
   layout: ViewLayout
@@ -61,6 +62,8 @@ export interface DisplayPanelProps<V extends PanelValue = ViewDisplay> {
   groupOptions?: readonly V['groupBy'][]
   /** Order by choices, in order; a view's by default. */
   sortOptions?: readonly SortBy[]
+  /** Live definitions used to offer local-only custom-field sorts. */
+  sortFields?: readonly FieldDef[]
   /** A board's Colour by (calendar-clarity "Colour by on boards"): a device choice for every board, not part of the view. */
   colorBy?: { mode: ColorByMode; onChange: (mode: ColorByMode) => void }
 }
@@ -81,10 +84,11 @@ export function DisplayPanel<V extends PanelValue = ViewDisplay>(props: DisplayP
 }
 
 /** The panel's content; also rendered on its own in stories and tests. */
-export function DisplayOptionsBody<V extends PanelValue = ViewDisplay>({ value, onChange: change, groupOptions = GROUP_BY_OPTIONS as readonly V['groupBy'][], sortOptions = SORT_BY_OPTIONS, colorBy }: DisplayPanelProps<V>) {
+export function DisplayOptionsBody<V extends PanelValue = ViewDisplay>({ value, onChange: change, groupOptions = GROUP_BY_OPTIONS as readonly V['groupBy'][], sortOptions = SORT_BY_OPTIONS, sortFields = [], colorBy }: DisplayPanelProps<V>) {
   const [more, setMore] = useState(false)
   const onChange = (patch: Partial<PanelValue>) => change(patch as Partial<V>)
   const hiddenNow = value.hidden
+  const fieldOptions = fieldSortOptions(sortFields, value.sortBy, t('Unavailable custom field'))
   const toggle = (p: RowProperty) => {
     if (!hiddenNow) return
     const hidden = hiddenNow.includes(p) ? hiddenNow.filter((x) => x !== p) : [...hiddenNow, p]
@@ -110,6 +114,9 @@ export function DisplayOptionsBody<V extends PanelValue = ViewDisplay>({ value, 
           <select className="ui-input w-full py-1 text-meta" aria-label={t('Order by')} value={value.sortBy}
             onChange={(e) => onChange({ sortBy: e.target.value as SortBy })}>
             {sortOptions.map((s) => <option key={s} value={s}>{SORT_LABEL[s]}</option>)}
+            {fieldOptions.length > 0 && <optgroup label={t('Custom fields')}>
+              {fieldOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </optgroup>}
           </select>
         </OptionRow>
         {colorBy && (

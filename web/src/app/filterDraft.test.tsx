@@ -8,12 +8,13 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db, getMeta } from '../lib/db'
 import { filterDraftKey, getFilterDraft, getFilterHistory, saveFilterDraft } from '../lib/filter'
 import { createTask, resetDeviceId } from '../lib/ops'
+import { fieldSortBy } from '../lib/types'
 import { switchTo } from '../lib/workspaces'
 import type { Workspace } from '../lib/types'
 import { click, render, type, waitFor } from '../ui/test-utils'
 import { hideBulkToast } from './bulk/toastStore'
 import { UndoToast } from './bulk/UndoToast'
-import { FilterView } from './FilterView'
+import { displayOfDraft, FilterView, NEW_VIEW_DISPLAY, toDraft } from './FilterView'
 
 beforeEach(async () => {
   await db.delete()
@@ -49,6 +50,16 @@ describe('New view keeps its draft', () => {
     await waitFor(() => input(r.container)?.value === 'p1', 'the query')
     await waitFor(() => !!r.container.querySelector('[data-view-board]'), 'the board layout')
     await r.unmount()
+  })
+
+  it('keeps a custom field definition ID when a New view draft is restored', async () => {
+    const sortBy = fieldSortBy('11111111-1111-4111-8111-111111111111')
+    const draft = toDraft('p1', { ...NEW_VIEW_DISPLAY, sortBy })
+    await saveFilterDraft('', draft)
+
+    const restored = await getFilterDraft('')
+    expect(restored).not.toBeNull()
+    expect(displayOfDraft(restored!).sortBy).toBe(sortBy)
   })
 
   it('leaving at once still keeps the latest query', async () => {

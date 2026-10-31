@@ -9,13 +9,15 @@ import { db, getMeta, setMeta } from './db'
 import { compile, filterScope, mentionsState, namesWorkspace, parse, withCompletedTasks, type FilterContext, type Node } from './filter'
 import type { BoardTemplate } from './boardTemplates'
 import { activeLabels } from './labels'
+import { applicableFieldsLookup } from './fieldTree'
+import { nameKey } from './fieldNames'
 import { VIEW_DEFAULTS, getDeviceId, mutate, mutateMany, mutationTables, type Change } from './ops'
 import { knownRule } from './rules'
 import { buildProjectTree } from './projects'
 import { ancestors, flattenTree } from './tree'
 import {
   GROUP_BY_OPTIONS, ROW_PROPERTIES, SORT_BY_OPTIONS, SORT_DIR_OPTIONS, VIEW_KINDS, VIEW_LAYOUTS,
-  type GroupBy, type OnDropRule, type Project, type RowProperty, type SortBy, type SortDir, type Task, type View, type ViewKind, type ViewLayout,
+  fieldSortId, isFieldSortBy, type FieldDef, type GroupBy, type OnDropRule, type Project, type RowProperty, type SortBy, type SortDir, type Task, type View, type ViewKind, type ViewLayout,
 } from './types'
 import { t, msg } from './i18n'
 import { uuid } from './ids'
@@ -139,7 +141,7 @@ export function viewOptions(v: Pick<View, 'kind' | 'group_by' | 'sort_by' | 'sor
   return {
     kind: pick(v.kind, VIEW_KINDS, VIEW_DEFAULTS.kind as ViewKind),
     groupBy: pick(v.group_by, GROUP_BY_OPTIONS, VIEW_DEFAULTS.group_by as GroupBy),
-    sortBy: pick(v.sort_by, SORT_BY_OPTIONS, VIEW_DEFAULTS.sort_by as SortBy),
+    sortBy: isFieldSortBy(v.sort_by) ? v.sort_by : pick(v.sort_by, SORT_BY_OPTIONS, VIEW_DEFAULTS.sort_by as SortBy),
     sortDir: pick(v.sort_dir, SORT_DIR_OPTIONS, VIEW_DEFAULTS.sort_dir as SortDir),
   }
 }
@@ -440,19 +442,76 @@ export function compileView(view: Pick<View, 'query'>, given: FilterContext, wit
   return { ok: true, warnings, every: !!given.everyWorkspace && namesWorkspace(ast), test: (task) => !(task.project_id && archived.has(task.project_id)) && test(task) }
 }
 
+const TITLE_COLLATOR = new Intl.Collator(undefined, { sensitivity: 'base' })
+
 function byTitle(a: Task, b: Task): number {
-  return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
+  return TITLE_COLLATOR.compare(a.title, b.title)
+}
+
+export interface FieldSortContext {
+  projects: readonly Project[]
+  fields?: readonly FieldDef[]
+}
+
+interface SortableFieldValue {
+  rank: number
+  value: number | string
+}
+
+function isFieldDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}
+
+function fieldValueFor(task: Task, selectedName: string, fieldsOf: (projectId: string | null | undefined) => FieldDef[]): SortableFieldValue | null {
+  const def = fieldsOf(task.project_id).find((field) => nameKey(field.name) === selectedName)
+  if (!def) return null
+  const value = task.fields?.[def.id]
+  switch (def.type) {
+    case 'number':
+      return typeof value === 'number' && Number.isFinite(value) ? { rank: 0, value } : null
+    case 'date':
+      return isFieldDate(value) ? { rank: 1, value } : null
+    case 'text':
+      return typeof value === 'string' && value.length > 0 ? { rank: 2, value } : null
+    default:
+      return null
+  }
 }
 
 /**
- * Comparator for one view's sort. `desc` reverses the field order, except that undated
- * tasks always come last under a due-date sort. For priority, "descending" means the
- * most important first (p1 before p4). Ties fall back to due, priority, position, id.
+ * Comparator for one view's sort. Descending reverses field values, except that undated
+ * tasks always come last under a due-date sort. Priority 1 is highest: descending
+ * puts it first. Ties fall back to due, priority, position and id.
  */
-export function compareTasks(sortBy: SortBy, dir: SortDir): (a: Task, b: Task) => number {
+export function compareTasks(sortBy: SortBy, dir: SortDir, context?: FieldSortContext): (a: Task, b: Task) => number {
   const sign = dir === 'desc' ? -1 : 1
   const fallback = (a: Task, b: Task) =>
     compareDue(a.due, b.due) || a.priority - b.priority || a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+  const selectedId = fieldSortId(sortBy)
+  if (selectedId) {
+    const selected = context?.fields?.find((field) => field.id === selectedId && !field.deleted_at)
+    if (!selected || !context || (selected.type !== 'number' && selected.type !== 'date')) return compareTasks('due', 'asc')
+    const selectedName = nameKey(selected.name)
+    const fieldsOf = applicableFieldsLookup(context.projects, context.fields ?? [])
+    const values = new WeakMap<Task, SortableFieldValue | null>()
+    const valueOf = (task: Task) => {
+      if (!values.has(task)) values.set(task, fieldValueFor(task, selectedName, fieldsOf))
+      return values.get(task)!
+    }
+    return (a, b) => {
+      const av = valueOf(a)
+      const bv = valueOf(b)
+      if (!av || !bv) return (av ? -1 : bv ? 1 : 0) || fallback(a, b)
+      if (av.rank !== bv.rank) return av.rank - bv.rank
+      const order = typeof av.value === 'number' && typeof bv.value === 'number'
+        ? av.value - bv.value
+        : TITLE_COLLATOR.compare(String(av.value), String(bv.value))
+      return sign * order || fallback(a, b)
+    }
+  }
   switch (sortBy) {
     case 'due':
       return (a, b) => {
@@ -460,7 +519,6 @@ export function compareTasks(sortBy: SortBy, dir: SortDir): (a: Task, b: Task) =
         return sign * compareDue(a.due, b.due) || fallback(a, b)
       }
     case 'priority':
-      // Priority 1 is the highest: ascending lists p4 first, descending p1 first.
       return (a, b) => sign * (b.priority - a.priority) || fallback(a, b)
     case 'position':
       return (a, b) => sign * (a.position - b.position) || fallback(a, b)
@@ -469,21 +527,21 @@ export function compareTasks(sortBy: SortBy, dir: SortDir): (a: Task, b: Task) =
     case 'title':
       return (a, b) => sign * byTitle(a, b) || fallback(a, b)
     case 'deadline':
-      // Like the due date: tasks without a deadline come last in either direction.
       return (a, b) => {
         if (!a.deadline || !b.deadline) return (a.deadline ? -1 : b.deadline ? 1 : 0) || fallback(a, b)
         return sign * (a.deadline < b.deadline ? -1 : a.deadline > b.deadline ? 1 : 0) || fallback(a, b)
       }
+    default:
+      return compareTasks('due', 'asc')
   }
 }
-
 /**
  * A saved view's comparator (OpenSpec change view-manual-order): its sort, where
  * Manual order is the view's own stored order, then the other tasks by position;
  * descending reverses it.
  */
-export function viewComparator(view: Pick<View, 'manual_order'>, sortBy: SortBy, dir: SortDir): (a: Task, b: Task) => number {
-  if (sortBy !== 'position') return compareTasks(sortBy, dir)
+export function viewComparator(view: Pick<View, 'manual_order'>, sortBy: SortBy, dir: SortDir, context?: FieldSortContext): (a: Task, b: Task) => number {
+  if (sortBy !== 'position') return compareTasks(sortBy, dir, context)
   const asc = compareManual(orderRank(view.manual_order))
   return dir === 'desc' ? (a, b) => asc(b, a) : asc
 }
@@ -564,7 +622,7 @@ export function runView(view: View, ctx: ViewContext): ViewResult {
   if (!c.ok) return c
   const { groupBy, sortBy, sortDir } = viewOptions(view)
   const scoped = viewScope(c, ctx)
-  const tasks = scoped.tasks.filter(c.test).sort(viewComparator(view, sortBy, sortDir))
+  const tasks = scoped.tasks.filter(c.test).sort(viewComparator(view, sortBy, sortDir, scoped))
   return { ok: true, tasks, groups: groupTasks(tasks, groupBy, scoped), warnings: c.warnings }
 }
 
@@ -594,12 +652,13 @@ export function evaluateViews(views: View[], ctx: ViewContext, limit = PANEL_TAS
   for (const tk of every.length ? ctx.everyWorkspace!.tasks : []) for (const l of every) if (l.test(tk)) l.matches.push(tk)
   for (const l of live) {
     const { groupBy, sortBy, sortDir } = viewOptions(l.view)
-    const sorted = l.matches.sort(viewComparator(l.view, sortBy, sortDir))
+    const scoped = viewScope(l, ctx)
+    const sorted = l.matches.sort(viewComparator(l.view, sortBy, sortDir, scoped))
     const firstN: Task[] = []
     if (limit > 0) {
       // Grouping by label can list a task twice; a panel shows each task once.
       const seen = new Set<string>()
-      for (const g of groupTasks(sorted, groupBy, l.every ? viewScope(l, ctx) : ctx)) {
+      for (const g of groupTasks(sorted, groupBy, scoped)) {
         for (const item of g.tasks) {
           if (firstN.length >= limit) break
           if (!seen.has(item.id)) {

@@ -2,6 +2,7 @@
 // tasks. Pure; names are resolved against the labels and projects passed in on
 // every compile, so renames are picked up and deleted names degrade to a warning
 // plus an empty match instead of an error (design D3).
+import { nameKey } from '../fieldNames'
 import { blockedMap } from '../dependencies'
 import { currentDateTime, currentDayStart, localDueOf } from '../dates'
 import { descendants } from '../tree'
@@ -64,10 +65,6 @@ export type FilterResult =
 type Pred = (task: Task) => boolean
 
 const NEVER: Pred = () => false
-
-function nameKey(name: string): string {
-  return name.trim().toLocaleLowerCase()
-}
 
 /**
  * True when the query mentions `completed` or `open`, or compares the completion

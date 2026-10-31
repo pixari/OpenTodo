@@ -51,3 +51,4 @@ Renaming an option of a choice field in place (same line) updates the tasks that
 ## Filter by a field
 
 Use a field's name in a [filter query](filters.md#custom-fields): `cost > 100`, `client = "Acme"`, `"Order date" <= friday`, `paid = true`, or `no client` for tasks without a value.
+See [Group and order](group-and-order.md) for field sorting. The setting stores definition IDs, keeping encrypted names out of sync operations.

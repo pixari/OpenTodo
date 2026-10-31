@@ -51,11 +51,12 @@ const work = (await post('labels', { name: 'work' })).id
 const waiting = (await post('labels', { name: 'waiting' })).id
 const errand = (await post('labels', { name: 'errand' })).id
 const pWork = (await post('projects', { name: 'Work' })).id
+const effortField = (await post('fields', { name: 'Effort', type: 'number', project_id: pWork })).id
 const seed = [
-  { title: 'Overdue report', priority: 1, due: { date: YESTERDAY }, labels: [work], project_id: pWork },
-  { title: 'Ship release', priority: 1, due: { date: TODAY }, labels: [work], project_id: pWork },
+  { title: 'Overdue report', priority: 1, due: { date: YESTERDAY }, labels: [work], project_id: pWork, fields: { [effortField]: 9 } },
+  { title: 'Ship release', priority: 1, due: { date: TODAY }, labels: [work], project_id: pWork, fields: { [effortField]: 2 } },
   { title: 'Review PR', priority: 3, due: { date: TODAY }, labels: [work] },
-  { title: 'Plan sprint', priority: 1, due: { date: TOMORROW }, labels: [work, waiting], project_id: pWork },
+  { title: 'Plan sprint', priority: 1, due: { date: TOMORROW }, labels: [work, waiting], project_id: pWork, fields: { [effortField]: 4 } },
   { title: 'Prepare demo', priority: 1, due: { date: TOMORROW }, labels: [work] },
   { title: 'Quarterly goals', priority: 1, due: { date: LATER }, labels: [work] },
   { title: 'Hear back from landlord', priority: 4, labels: [waiting] },
@@ -97,6 +98,30 @@ const viewCount = await pageA.locator('[data-page-meta]').first().textContent()
 assert(viewCount === '4', 'view result count ' + viewCount)
 // A filter row shows no number (quiet-sidebar): its name and data-open-count, the count read by assistive technology.
 await pageA.waitForFunction(() => [...document.querySelectorAll('nav[aria-label="Views"] button[data-view-id]')].some((b) => (b.querySelector('.truncate')?.textContent ?? '') + (b.querySelector('[data-open-count]')?.getAttribute('data-open-count') ?? '') === 'Work tomorrow4'))
+
+step('Sort a saved view by a custom field ID and keep its decrypted name local')
+const effortSort = `field:${effortField}`
+const displayPanel = await display(pageA)
+await displayPanel.getByLabel('Group by').selectOption('none')
+await displayPanel.getByLabel('Order by').selectOption(effortSort)
+await pageA.waitForFunction(() => {
+  const titles = [...document.querySelectorAll('[aria-label="View results"] [data-task-id] [data-row-title]')].map((el) => el.textContent?.trim())
+  return JSON.stringify(titles) === JSON.stringify(['Ship release', 'Plan sprint', 'Overdue report', 'Prepare demo'])
+})
+assert(await displayPanel.locator(`option[value="${effortSort}"]`).textContent() === 'Effort', 'the UI resolves the local custom-field name')
+assert(await displayPanel.getByLabel('Order by').inputValue() === effortSort, 'the selector keeps the definition ID')
+let fieldSortedViews = (await get('views')).views
+for (let i = 0; i < 20 && fieldSortedViews.find((view) => view.name === 'Work tomorrow')?.sort_by !== effortSort; i++) {
+  await pageA.waitForTimeout(250); fieldSortedViews = (await get('views')).views
+}
+const fieldSortedView = fieldSortedViews.find((view) => view.name === 'Work tomorrow')
+assert(fieldSortedView?.sort_by === effortSort, 'the REST view stores field:<definition-id>')
+const fieldSortSync = await post('sync', { device: 'browser-privacy-check', cursor: 0 })
+const fieldSortOps = fieldSortSync.ops.filter((op) => op.entity === 'view' && op.field === 'sort_by' && op.value === effortSort)
+assert(fieldSortOps.length > 0, 'the sync operation carries the definition ID')
+assert(!JSON.stringify(fieldSortOps).includes('Effort'), 'the sync operation does not carry the decrypted field name')
+await closeDisplay(pageA)
+
 await shot(pageA, 'views-saved.png')
 
 step('Edit a saved query: / then add "& !@waiting", Enter')

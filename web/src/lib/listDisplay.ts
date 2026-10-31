@@ -7,7 +7,7 @@
 // not know reads as the page's default and is never rewritten.
 import { mutate } from './ops'
 import { rowLayoutOf, type RowLayout } from './rowLayout'
-import type { GroupBy, Label, ProjectPrefs, SortBy, SortDir } from './types'
+import { isFieldSortBy, type GroupBy, type Label, type ProjectPrefs, type SortBy, type SortDir } from './types'
 
 /** A list page's grouping: a view's choices plus the project's sections. */
 export type ListGroupBy = GroupBy | 'section'
@@ -47,7 +47,7 @@ export function listDisplayOf(kind: DisplayScope['kind'], row: Pick<ProjectPrefs
   return {
     rowLayout: rowLayoutOf(row?.row_layout, account),
     groupBy: pick(row?.group_by, kind === 'project' ? PROJECT_GROUP_OPTIONS : LABEL_GROUP_OPTIONS, d.groupBy),
-    sortBy: pick(row?.sort_by, LIST_SORT_OPTIONS, d.sortBy),
+    sortBy: isFieldSortBy(row?.sort_by) ? row.sort_by : pick(row?.sort_by, LIST_SORT_OPTIONS, d.sortBy),
     sortDir: pick(row?.sort_dir, SORT_DIRS, d.sortDir),
   }
 }

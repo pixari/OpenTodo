@@ -1,0 +1,29 @@
+# Design: sort task lists by custom fields
+
+## Context
+
+Project lists, label pages and saved views already persist their order in a string `sort_by` value. Each page gets its Order by choices from the shared list display panel. Custom fields are project-scoped; task values are keyed by definition id, and definitions may be inherited from ancestor projects. Field queries already match names without regard to case across projects. Saved views may contain tasks from several projects.
+
+## Decisions
+
+- **D1 Reuse the existing sort value without exposing content.** Store a field sort as `field:<definition-id>` in the existing project preference, label or view `sort_by` string. Definition IDs are non-content metadata; field names remain encrypted on encrypted accounts. The client resolves the selected definition locally, reads its decrypted name, then matches that name case-insensitively against each task's applicable definitions across projects. No operation schema field or database migration is introduced. The view REST API accepts a well-formed UUID after `field:` without requiring that the definition exist at write time, since a saved view can be edited while offline or before its matching project is available.
+- **D2 Resolve each task's applicable definition.** Build the options from live Number and Date custom-field definitions applicable to tasks in the displayed list, including inherited definitions. Show each case-insensitive field name once, while persisting the selected definition ID. Resolve the selected ID to its current local name, then resolve each task's same-named definition using the existing applicable-field order (ancestors farthest first, then each project's fields by position, then the task's project). A task from a project with no matching definition, or with no value, sorts as missing.
+- **D3 Sort by typed values, including across types.** Compare Number values numerically and Date values chronologically as their `YYYY-MM-DD` dates. Same-named Text definitions participate with the same locale-aware, case-insensitive comparison as Title; equal values use the existing fallback. If matching definitions have different types across tasks in the same list, numbers sort before dates, followed by text, in both directions; descending reverses only values within each type. Reverse only the primary comparison, not the fallback. Missing or type-mismatched values always come after present values in both directions. Field-name comparison and option de-duplication use the same case-insensitive matching as field query terms.
+- **D4 Keep current tie and list behavior.** When two tasks have equal field values, use the existing fallback order: due date, priority, position and id. In saved views, the chosen order remains within each existing group. In project lists, section headers, parent/subtask nesting, Later and Completed keep their current behavior. A project drag or keyboard move while a field order is active first switches the project back to Manual order, as it does for other non-manual sorts.
+- **D5 Unknown values remain forward-compatible.** A client that does not recognize `field:<id>`, including an older client, reads the list with the existing default order and does not rewrite the stored value. If the selected definition is unavailable or deleted, the new client also uses the default and retains the ID. Renaming the selected definition does not orphan the sort because the same ID resolves to its new name. This follows the existing unknown-sort behavior and avoids writing to preferences as a side effect of field edits.
+- **D6 Keep built-in defaults.** Existing built-in options, initial sort values, sort direction, per-project/per-label/view persistence and sync behavior stay unchanged. Field options appear after the built-in options.
+
+## Risks and tradeoffs
+
+- A saved field sort follows one definition ID. When that definition is renamed, the client uses its new decrypted name to match fields in other projects; when it is deleted, the list falls back to its default order and retains the ID.
+- Sort operations reveal the selected definition ID, but never the field name. The client reads the name from local encrypted definitions and keeps name matching on-device.
+- A same-named field can be Number in one project and Date in another. For a list spanning both, Number values sort before Date values, then Text values in both directions. This deterministic rule is simple to preserve across devices, although users may prefer to keep same-named fields at the same type.
+- Old clients do not perform the custom-field sort, but preserve the sort value for clients that support it.
+
+## Verification direction
+
+Cover numeric ordering (including values such as 2 and 10), date ordering, ascending and descending, mixed date/number/text definitions, missing values in both directions, case-insensitive cross-project definitions, rename stability, deleted-definition fallback, tie fallback, inherited definitions, unknown values on older-client paths, existing groups and nested subtasks, and Later/Completed placement. Verify the same sort choice in project, label, saved-view and New view lists, REST acceptance of a well-formed `field:<id>`, rejection of names and malformed IDs, and that operation logs contain the ID but not the decrypted name.
+
+The option reuses the existing Display options panel, adding no chrome or task properties, so it stays within the interface budget. It remains keyboard-operable through the existing Order by select.
+
+Mixed-type rank stays Number, Date, Text in both directions so a descending WSJF view keeps numeric scores ahead of a same-named Text field created by mistake. Direction applies within each type. Text follows Title collation for consistency with the existing product rather than imposing a separate device-independent text order.

@@ -406,12 +406,32 @@ export interface Label extends LabelFields {
 
 export type ViewKind = 'list' | 'dashboard'
 export type GroupBy = 'project' | 'due' | 'priority' | 'label' | 'none'
-export type SortBy = 'due' | 'priority' | 'position' | 'created' | 'title' | 'deadline'
+export type FieldSortBy = `field:${string}`
+export type SortBy = 'due' | 'priority' | 'position' | 'created' | 'title' | 'deadline' | FieldSortBy
 export type SortDir = 'asc' | 'desc'
 
 export const VIEW_KINDS: readonly ViewKind[] = ['list', 'dashboard']
 export const GROUP_BY_OPTIONS: readonly GroupBy[] = ['project', 'due', 'priority', 'label', 'none']
 export const SORT_BY_OPTIONS: readonly SortBy[] = ['due', 'priority', 'position', 'created', 'deadline', 'title']
+
+const FIELD_SORT_PREFIX = 'field:'
+const FIELD_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+
+/** Client parsing is deliberately tolerant: sync preserves strings the REST API rejects. */
+export function fieldSortId(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.startsWith(FIELD_SORT_PREFIX)) return null
+  const id = value.slice(FIELD_SORT_PREFIX.length)
+  return FIELD_ID_PATTERN.test(id) ? id : null
+}
+
+export function fieldSortBy(id: string): FieldSortBy {
+  return `${FIELD_SORT_PREFIX}${id}` as FieldSortBy
+}
+
+/** Whether a stored or selected sort value names a custom field by its definition id. */
+export function isFieldSortBy(value: unknown): value is FieldSortBy {
+  return fieldSortId(value) !== null
+}
 export const SORT_DIR_OPTIONS: readonly SortDir[] = ['asc', 'desc']
 export type ViewLayout = 'list' | 'board'
 export const VIEW_LAYOUTS: readonly ViewLayout[] = ['list', 'board']
